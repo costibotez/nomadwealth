@@ -1,0 +1,363 @@
+/**
+ * Builds the canonical net-worth model in EUR from the DB tables.
+ * Server-only. Pages call these and pass plain EUR numbers to client components,
+ * which convert to the display currency via the CurrencyProvider.
+ */
+import "server-only";
+import {
+  getTransactions,
+  getAccounts,
+  getLoans,
+  getLoanReceipts,
+  getProperties,
+  getRealizedTrades,
+  getBusinesses,
+  type TransactionRow,
+} from "@/db/queries";
+import { getFxRates, toEur } from "@/lib/fx-server";
+import { loanState, interestToDate, type Compounding } from "@/lib/finance";
+
+export const ASSET_CLASS_LABELS: Record<string, string> = {
+  ro_stock: "RO Stocks",
+  us_stock: "US Stocks",
+  crypto: "Crypto",
+  reit: "Crowdfunding REIT",
+  mutual_fund: "Mutual Funds",
+  gold: "Gold",
+  other: "Other",
+};
+
+const GEO: Record<string, "Romania" | "US" | "Crypto" | "Global"> = {
+  ro_stock: "Romania",
+  reit: "Romania",
+  mutual_fund: "Romania",
+  us_stock: "US",
+  crypto: "Crypto",
+  gold: "Global",
+  other: "Global",
+};
+
+export interface SymbolHolding {
+  symbol: string;
+  assetClass: string;
+  quantity: number;
+  avgCost: number; // native
+  investedEur: number;
+  currentValueEur: number;
+  unrealizedPlEur: number;
+  unrealizedPct: number | null;
+  avgHoldingDays: number | null;
+  maturityDate: string | null;
+  lots: TransactionRow[];
+}
+
+export interface ClassHolding {
+  assetClass: string;
+  label: string;
+  investedEur: number;
+  currentValueEur: number;
+  unrealizedPlEur: number;
+  unrealizedPct: number | null;
+  symbols: SymbolHolding[];
+}
+
+function daysBetween(iso: string): number {
+  const d = new Date(iso).getTime();
+  return Math.max(0, Math.round((Date.now() - d) / 86400000));
+}
+
+export interface RealizedFromTxn {
+  symbol: string;
+  assetClass: string;
+  closeDate: string;
+  quantity: number;
+  costEur: number;
+  proceedsEur: number;
+  plEur: number;
+}
+
+export async function getHoldingsModel() {
+  const [txns, fx] = await Promise.all([getTransactions(), getFxRates()]);
+
+  // Group ALL transactions (buys + sells) per symbol so sells net against buys.
+  const bySymbol = new Map<string, TransactionRow[]>();
+  for (const t of txns) {
+    const key = `${t.assetClass}::${t.symbol}`;
+    (bySymbol.get(key) ?? bySymbol.set(key, []).get(key)!).push(t);
+  }
+
+  const symbols: SymbolHolding[] = [];
+  const realizedFromTxns: RealizedFromTxn[] = [];
+
+  for (const [key, allLots] of bySymbol) {
+    const [assetClass, symbol] = key.split("::");
+    const buys = allLots.filter((l) => l.direction === "buy");
+    const sells = allLots.filter((l) => l.direction === "sell");
+
+    // Average-cost basis from buys (in native + EUR).
+    let buyQty = 0,
+      investedNativeBuys = 0,
+      investedEurBuys = 0,
+      daysSum = 0,
+      daysN = 0;
+    let maturityDate: string | null = null;
+    let priceEurPerShare = 0;
+    for (const l of buys) {
+      buyQty += l.quantity;
+      // Commission on a buy is part of what you paid → add to cost basis.
+      const grossNative = l.quantity * l.unitCost + (l.commission ?? 0);
+      investedNativeBuys += grossNative;
+      investedEurBuys += toEur(grossNative, l.costCurrency, fx.rates);
+      daysSum += daysBetween(l.tradeDate);
+      daysN++;
+      if (l.maturityDate) maturityDate = l.maturityDate;
+      // Representative current price (same symbol → same price); last one wins.
+      priceEurPerShare = toEur(l.currentPrice, l.priceCurrency, fx.rates);
+    }
+    const avgCostNative = buyQty > 0 ? investedNativeBuys / buyQty : 0;
+    const avgCostEur = buyQty > 0 ? investedEurBuys / buyQty : 0;
+
+    // Realized P/L per sell (proceeds − average cost basis of the sold shares).
+    let sellQty = 0;
+    for (const s of sells.sort((a, b) => (a.tradeDate < b.tradeDate ? -1 : 1))) {
+      sellQty += s.quantity;
+      // Net proceeds = gross − sell commission − sale tax.
+      const netNative = s.quantity * s.unitCost - (s.commission ?? 0) - (s.saleTax ?? 0);
+      const proceedsEur = toEur(netNative, s.costCurrency, fx.rates);
+      const costEur = avgCostEur * s.quantity;
+      realizedFromTxns.push({
+        symbol,
+        assetClass,
+        closeDate: s.tradeDate,
+        quantity: s.quantity,
+        costEur,
+        proceedsEur,
+        plEur: proceedsEur - costEur,
+      });
+    }
+
+    const remainingQty = buyQty - sellQty;
+    // Fully-closed positions drop out of the holdings table (realized P/L kept).
+    if (remainingQty <= 1e-9) continue;
+
+    const investedEur = avgCostEur * remainingQty;
+    const currentValueEur = priceEurPerShare * remainingQty;
+    const unrealizedPlEur = currentValueEur - investedEur;
+    symbols.push({
+      symbol,
+      assetClass,
+      quantity: remainingQty,
+      avgCost: avgCostNative,
+      investedEur,
+      currentValueEur,
+      unrealizedPlEur,
+      unrealizedPct: investedEur > 0 ? unrealizedPlEur / investedEur : null,
+      avgHoldingDays: daysN ? Math.round(daysSum / daysN) : null,
+      maturityDate,
+      lots: allLots,
+    });
+  }
+
+  const classMap = new Map<string, ClassHolding>();
+  for (const s of symbols) {
+    let c = classMap.get(s.assetClass);
+    if (!c) {
+      c = {
+        assetClass: s.assetClass,
+        label: ASSET_CLASS_LABELS[s.assetClass] ?? s.assetClass,
+        investedEur: 0,
+        currentValueEur: 0,
+        unrealizedPlEur: 0,
+        unrealizedPct: null,
+        symbols: [],
+      };
+      classMap.set(s.assetClass, c);
+    }
+    c.investedEur += s.investedEur;
+    c.currentValueEur += s.currentValueEur;
+    c.unrealizedPlEur += s.unrealizedPlEur;
+    c.symbols.push(s);
+  }
+  const classes = [...classMap.values()].map((c) => ({
+    ...c,
+    unrealizedPct: c.investedEur > 0 ? c.unrealizedPlEur / c.investedEur : null,
+    symbols: c.symbols.sort((a, b) => b.currentValueEur - a.currentValueEur),
+  }));
+  classes.sort((a, b) => b.currentValueEur - a.currentValueEur);
+
+  return { classes, fx, realizedFromTxns };
+}
+
+export interface NetWorthModel {
+  fx: { asOf: string; stale: boolean; source: string };
+  totalNetWorthEur: number;
+  personalNetWorthEur: number;
+  companyCashEur: number;
+  totalInvestedEur: number;
+  totalCurrentValueEur: number;
+  unrealizedPlEur: number;
+  unrealizedPct: number | null;
+  realizedPlYtdEur: number;
+  components: {
+    investmentsEur: number;
+    accountsEur: number;
+    loansEur: number;
+    propertiesEur: number;
+    businessesEur: number;
+  };
+  allocationByClass: { key: string; label: string; valueEur: number }[];
+  allocationByGeography: { key: string; valueEur: number }[];
+  currencyExposure: { currency: string; valueEur: number }[];
+  concentration: {
+    largestSymbol: string;
+    largestPct: number;
+    romanianPct: number;
+    illiquidPct: number;
+  };
+}
+
+export async function getNetWorthModel(): Promise<NetWorthModel> {
+  const [{ classes, fx, realizedFromTxns }, accounts, loans, receipts, properties, realized, businessRows] =
+    await Promise.all([
+      getHoldingsModel(),
+      getAccounts(),
+      getLoans(),
+      getLoanReceipts(),
+      getProperties(),
+      getRealizedTrades(),
+      getBusinesses(),
+    ]);
+
+  const investmentsEur = classes.reduce((s, c) => s + c.currentValueEur, 0);
+  const investedEur = classes.reduce((s, c) => s + c.investedEur, 0);
+
+  const accountsEur = accounts.reduce((s, a) => s + toEur(a.balance, a.currency, fx.rates), 0);
+  const companyCashEur = accounts
+    .filter((a) => a.isCompany)
+    .reduce((s, a) => s + toEur(a.balance, a.currency, fx.rates), 0);
+
+  // Loans receivable: remaining principal + interest accrued to date, in EUR.
+  const receiptsByLoan = new Map<number, typeof receipts>();
+  for (const r of receipts) {
+    (receiptsByLoan.get(r.loanId) ?? receiptsByLoan.set(r.loanId, []).get(r.loanId)!).push(r);
+  }
+  let loansEur = 0;
+  for (const l of loans) {
+    if (l.status === "repaid" || l.status === "defaulted") continue;
+    const rcpts = receiptsByLoan.get(l.id) ?? [];
+    const start = l.startDate ? new Date(l.startDate) : new Date();
+    const state = loanState(
+      l.principal,
+      start,
+      [],
+      rcpts.map((r) => ({ date: new Date(r.receivedOn), amount: r.amount, kind: r.kind as "principal" | "interest" })),
+    );
+    const interest = interestToDate(
+      l.principal,
+      l.interestRate,
+      start,
+      new Date(),
+      l.termMonths,
+      l.compounding as Compounding,
+    );
+    // Outstanding = principal not yet repaid + accrued-but-unreceived interest.
+    const outstandingNative = state.principalRemaining + Math.max(0, interest - state.interestReceived);
+    loansEur += toEur(outstandingNative, l.currency, fx.rates);
+  }
+
+  // Sold properties no longer sit in net worth (proceeds moved to cash).
+  const propertiesEur = properties
+    .filter((p) => p.status !== "sold")
+    .reduce((s, p) => s + toEur(p.value, p.currency, fx.rates), 0);
+
+  // Active businesses with a valuation count toward net worth (like a property's
+  // value). Sold/closed businesses, and those without a valuation, are excluded.
+  const businessesEur = businessRows
+    .filter((b) => b.status === "active" && b.valuation != null)
+    .reduce((s, b) => s + toEur(b.valuation as number, b.currency, fx.rates), 0);
+
+  const totalNetWorthEur = investmentsEur + accountsEur + loansEur + propertiesEur + businessesEur;
+  const personalNetWorthEur = totalNetWorthEur - companyCashEur;
+
+  const thisYear = new Date().getFullYear();
+  const realizedPlYtdEur =
+    realized
+      .filter((t) => t.closeDate && new Date(t.closeDate).getFullYear() === thisYear)
+      .reduce((s, t) => s + toEur(t.pl, t.currency, fx.rates), 0) +
+    realizedFromTxns
+      .filter((t) => new Date(t.closeDate).getFullYear() === thisYear)
+      .reduce((s, t) => s + t.plEur, 0);
+
+  // Allocation by class (+ property/loan/cash as their own slices)
+  const allocationByClass = [
+    ...classes.map((c) => ({ key: c.assetClass, label: c.label, valueEur: c.currentValueEur })),
+    { key: "property", label: "Real Estate", valueEur: propertiesEur },
+    { key: "loans", label: "Loans", valueEur: loansEur },
+    { key: "cash", label: "Cash", valueEur: accountsEur },
+    { key: "businesses", label: "Businesses", valueEur: businessesEur },
+  ].filter((x) => x.valueEur > 0);
+
+  // Geography
+  const geo = new Map<string, number>();
+  const addGeo = (k: string, v: number) => geo.set(k, (geo.get(k) ?? 0) + v);
+  for (const c of classes) addGeo(GEO[c.assetClass] ?? "Global", c.currentValueEur);
+  addGeo("Romania", propertiesEur + loansEur);
+  for (const a of accounts)
+    addGeo(a.currency === "RON" ? "Romania" : "Global", toEur(a.balance, a.currency, fx.rates));
+  const allocationByGeography = [...geo.entries()].map(([key, valueEur]) => ({ key, valueEur }));
+
+  // Currency exposure by native currency
+  const cur = new Map<string, number>();
+  const addCur = (c: string, v: number) => cur.set(c, (cur.get(c) ?? 0) + v);
+  for (const c of classes) {
+    // investments priced in USD per import
+    addCur("USD", c.currentValueEur);
+  }
+  for (const a of accounts) addCur(a.currency, toEur(a.balance, a.currency, fx.rates));
+  for (const p of properties) addCur(p.currency, toEur(p.value, p.currency, fx.rates));
+  for (const b of businessRows) {
+    if (b.status === "active" && b.valuation != null) addCur(b.currency, toEur(b.valuation, b.currency, fx.rates));
+  }
+  for (const l of loans) {
+    if (l.status === "active") addCur(l.currency, toEur(l.principal, l.currency, fx.rates));
+  }
+  const currencyExposure = [...cur.entries()]
+    .map(([currency, valueEur]) => ({ currency, valueEur }))
+    .sort((a, b) => b.valueEur - a.valueEur);
+
+  // Concentration
+  const allSymbols = classes.flatMap((c) => c.symbols);
+  const largest = allSymbols.reduce(
+    (m, s) => (s.currentValueEur > m.currentValueEur ? s : m),
+    { symbol: "—", currentValueEur: 0 } as { symbol: string; currentValueEur: number },
+  );
+  const romanianEur =
+    classes
+      .filter((c) => GEO[c.assetClass] === "Romania")
+      .reduce((s, c) => s + c.currentValueEur, 0) +
+    propertiesEur +
+    loansEur;
+  const illiquidEur = propertiesEur + loansEur;
+
+  return {
+    fx: { asOf: fx.asOf, stale: fx.stale, source: fx.source },
+    totalNetWorthEur,
+    personalNetWorthEur,
+    companyCashEur,
+    totalInvestedEur: investedEur,
+    totalCurrentValueEur: investmentsEur,
+    unrealizedPlEur: investmentsEur - investedEur,
+    unrealizedPct: investedEur > 0 ? (investmentsEur - investedEur) / investedEur : null,
+    realizedPlYtdEur,
+    components: { investmentsEur, accountsEur, loansEur, propertiesEur, businessesEur },
+    allocationByClass,
+    allocationByGeography,
+    currencyExposure,
+    concentration: {
+      largestSymbol: largest.symbol,
+      largestPct: totalNetWorthEur ? largest.currentValueEur / totalNetWorthEur : 0,
+      romanianPct: totalNetWorthEur ? romanianEur / totalNetWorthEur : 0,
+      illiquidPct: totalNetWorthEur ? illiquidEur / totalNetWorthEur : 0,
+    },
+  };
+}

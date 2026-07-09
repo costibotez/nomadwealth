@@ -1,0 +1,337 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Theme tokens as RGB channels (space-separated, no rgb() wrapper) so Tailwind
+ * can apply opacity modifiers. :root is the default DARK theme; adding the
+ * `.light` class to <html> swaps in the LIGHT palette. Toggle is in the header.
+ */
+/* Dashboard chrome tokens, aligned to the NomadWealth design tokens (see the
+   --bg/--surface/--text/--gain/--loss hex vars below) so the customer dashboard,
+   marketing site and admin console share one palette. */
+:root {
+  color-scheme: dark;
+  --c-base: 15 17 21; /* #0f1115 = --bg */
+  --c-panel: 20 23 29; /* #14171d = --surface */
+  --c-raised: 26 30 38; /* #1a1e26 subtle raise */
+  --c-hover: 31 36 45; /* #1f242d */
+  --c-border: 33 37 45; /* #21252d ≈ --line over bg */
+  --c-accent: 255 122 24; /* #ff7a18 = --accent */
+  --c-gain: 63 191 159; /* #3fbf9f = --nw-gain */
+  --c-loss: 239 107 107; /* #ef6b6b = --nw-loss */
+  --c-ink: 226 232 240; /* #e2e8f0 = --text */
+  --c-ink-muted: 138 148 166; /* #8a94a6 = --muted */
+  --c-ink-faint: 107 118 136; /* #6b7688 = --dim */
+}
+
+html.light {
+  color-scheme: light;
+  --c-base: 236 239 243; /* #eceff3 */
+  --c-panel: 255 255 255; /* #ffffff */
+  --c-raised: 246 248 250; /* #f6f8fa */
+  --c-hover: 236 238 242; /* #eceef2 */
+  --c-border: 223 227 232; /* #dfe3e8 */
+  --c-accent: 255 122 24; /* #ff7a18 — same accent in both themes */
+  --c-gain: 63 191 159; /* #3fbf9f */
+  --c-loss: 239 107 107; /* #ef6b6b */
+  --c-ink: 18 21 27; /* #12151b */
+  --c-ink-muted: 90 100 114; /* #5a6472 */
+  --c-ink-faint: 129 139 153; /* #818b99 */
+}
+
+html,
+body {
+  background-color: rgb(var(--c-base));
+  color: rgb(var(--c-ink));
+}
+
+/* Financial figures: Geist Mono + tabular-nums, matching the marketing site and
+   admin console (the design uses mono for ALL figures). */
+.tnum {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Subtle custom scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-border)) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-border));
+  border-radius: 8px;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-border bg-raised shadow-card;
+  }
+  .panel {
+    @apply rounded-2xl border border-border bg-panel;
+  }
+  .stat-label {
+    @apply text-xs font-medium uppercase tracking-wide text-ink-faint;
+  }
+  .focusring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-2 focus-visible:ring-offset-base;
+  }
+}
+
+/* Shimmer skeleton */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgb(var(--c-raised));
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.05),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   NomadWealth design tokens (design-exports/tokens.css)
+   Single source of truth for the marketing / setup / cockpit
+   surfaces. Values are hex (not RGB channels): these tokens are
+   consumed directly as `var(--token)` by Tailwind utilities
+   (see tailwind.config.ts) and by the signature effect classes.
+   Dark is the default (:root); the existing `.light` class on
+   <html> swaps in the light palette (design's `.nw-light`).
+   ============================================================ */
+:root {
+  /* surfaces */
+  --bg: #0f1115;
+  --surface: #14171d;
+  --surface-2: #12151b;
+  --surface-3: #101319;
+  --input-bg: #0f1115;
+  /* text */
+  --text: #e2e8f0;
+  --text-2: #c8d0dc;
+  --muted: #8a94a6;
+  --dim: #6b7688;
+  --disabled: #4b5563;
+  /* lines / fills */
+  --hair: rgba(255, 255, 255, 0.05);
+  --chip: rgba(255, 255, 255, 0.04);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --border-btn: rgba(255, 255, 255, 0.14);
+  /* chrome & effects */
+  --header-bg: rgba(15, 17, 21, 0.82);
+  --grid-line: rgba(255, 255, 255, 0.045);
+  --shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.7);
+}
+
+html.light {
+  --bg: #eceff3;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --surface-3: #eceef2;
+  --input-bg: #ffffff;
+  --text: #12151b;
+  --text-2: #333b47;
+  --muted: #5a6472;
+  --dim: #818b99;
+  --disabled: #a9b1bd;
+  --hair: rgba(0, 0, 0, 0.045);
+  --chip: rgba(0, 0, 0, 0.035);
+  --line: rgba(0, 0, 0, 0.09);
+  --line-strong: rgba(0, 0, 0, 0.14);
+  --border-btn: rgba(0, 0, 0, 0.16);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --grid-line: rgba(0, 0, 0, 0.05);
+  --shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.22);
+}
+
+/* Brand / semantic — identical in both themes */
+:root {
+  --accent: #ff7a18;
+  --accent-on: #0f1115;
+  --accent-ink: #e07a1e;
+  --accent-tint: rgba(255, 122, 24, 0.12);
+  --accent-tint-2: rgba(255, 122, 24, 0.08);
+  --accent-ring: rgba(255, 122, 24, 0.3);
+  --nw-gain: #3fbf9f;
+  --nw-loss: #ef6b6b;
+  --series-holdings: #ff7a18;
+  --series-realestate: #5b8def;
+  --series-loans: #3fbf9f;
+  --series-cash: #b98cff;
+  --series-business: #f4c04e;
+  --neon: #00e5c7;
+  --step-license: #ff7a18;
+  --step-import: #5b8def;
+  --glow: 0 10px 26px -10px rgba(255, 122, 24, 0.7);
+  --glow-hover: 0 16px 36px -10px rgba(255, 122, 24, 0.85);
+  /* chart */
+  --chart-line: var(--accent);
+  --chart-fill-top: rgba(255, 122, 24, 0.3);
+  --chart-fill-bot: rgba(255, 122, 24, 0);
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-axis: #5c6675;
+  --chart-dot-ring: #14171d;
+  /* macbook device frame (always dark) */
+  --mac-lid: #191c22;
+  --mac-screen-bg: #0b0d11;
+  --mac-panel: #14171d;
+  --mac-panel-2: #101319;
+  --mac-sidebar: #0d0f13;
+  --mac-text: #e8ebf0;
+  --mac-muted: #8a94a6;
+  --mac-dim: #5c6675;
+  --mac-base-top: #c9ced5;
+  --mac-base-bot: #9ea4ac;
+}
+html.light {
+  --chart-grid: rgba(0, 0, 0, 0.08);
+  --chart-axis: #8792a3;
+  --chart-dot-ring: #ffffff;
+}
+
+/* Financial figures: mono + tabular */
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Theme-swapped wordmark: white-text art on dark, dark-text art on light.
+   Driven by the `.light` class on <html> (same signal as the palette). */
+.nw-logo--dark {
+  display: inline-block;
+}
+.nw-logo--light {
+  display: none;
+}
+html.light .nw-logo--dark {
+  display: none;
+}
+html.light .nw-logo--light {
+  display: inline-block;
+}
+
+/* ---- Signature effects ---- */
+.fx-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask: radial-gradient(120% 95% at 50% 0%, #000 28%, transparent 74%);
+  mask: radial-gradient(120% 95% at 50% 0%, #000 28%, transparent 74%);
+}
+.fx-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(34px);
+  pointer-events: none;
+}
+.fx-blob--a {
+  top: -130px;
+  left: -90px;
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, rgba(255, 122, 24, 0.22), transparent 62%);
+  animation: fx-float-a 15s ease-in-out infinite;
+}
+.fx-blob--b {
+  top: 30px;
+  right: -110px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 122, 24, 0.13), transparent 62%);
+  animation: fx-float-b 19s ease-in-out infinite;
+}
+.fx-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    520px circle at var(--mx, 50%) var(--my, 32%),
+    rgba(255, 122, 24, 0.16),
+    transparent 55%
+  );
+  transition: background 0.08s linear;
+}
+.fx-caret {
+  color: var(--accent);
+  font-weight: 300;
+  animation: fx-blink 1s step-end infinite;
+}
+@keyframes fx-float-a {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(46px, 34px);
+  }
+}
+@keyframes fx-float-b {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-34px, 24px);
+  }
+}
+@keyframes fx-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes fx-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes fx-fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fx-fadeup {
+  animation: fx-fadeup 0.35s ease both;
+}
+.fx-pulse-dot {
+  animation: fx-pulse 2s infinite;
+}

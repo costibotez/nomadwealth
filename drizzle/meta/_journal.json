@@ -1,0 +1,111 @@
+{
+ "version": "7",
+ "dialect": "postgresql",
+ "entries": [
+  {
+   "idx": 0,
+   "version": "7",
+   "when": 1782233558500,
+   "tag": "0000_thin_jackal",
+   "breakpoints": true
+  },
+  {
+   "idx": 1,
+   "version": "7",
+   "when": 1782287420267,
+   "tag": "0001_property_rent_and_live",
+   "breakpoints": true
+  },
+  {
+   "idx": 2,
+   "version": "7",
+   "when": 1782287973867,
+   "tag": "0002_wedding_legend",
+   "breakpoints": true
+  },
+  {
+   "idx": 3,
+   "version": "7",
+   "when": 1782288261956,
+   "tag": "0003_property_ledger",
+   "breakpoints": true
+  },
+  {
+   "idx": 4,
+   "version": "7",
+   "when": 1782288599077,
+   "tag": "0004_loan_receipts",
+   "breakpoints": true
+  },
+  {
+   "idx": 5,
+   "version": "7",
+   "when": 1782289295282,
+   "tag": "0005_wedding_gifts",
+   "breakpoints": true
+  },
+  {
+   "idx": 6,
+   "version": "7",
+   "when": 1782304249463,
+   "tag": "0006_watchlist_alerts",
+   "breakpoints": true
+  },
+  {
+   "idx": 7,
+   "version": "7",
+   "when": 1782338267947,
+   "tag": "0007_bent_the_anarchist",
+   "breakpoints": true
+  },
+  {
+   "idx": 8,
+   "version": "7",
+   "when": 1782340042087,
+   "tag": "0008_spooky_silverclaw",
+   "breakpoints": true
+  },
+  {
+   "idx": 9,
+   "version": "7",
+   "when": 1782426442087,
+   "tag": "0009_dividend_net_amount",
+   "breakpoints": true
+  },
+  {
+   "idx": 10,
+   "version": "7",
+   "when": 1782512842087,
+   "tag": "0010_commission_sale_tax",
+   "breakpoints": true
+  },
+  {
+   "idx": 11,
+   "version": "7",
+   "when": 1782599242087,
+   "tag": "0011_share_links",
+   "breakpoints": true
+  },
+  {
+   "idx": 12,
+   "version": "7",
+   "when": 1782685642087,
+   "tag": "0012_businesses_clients",
+   "breakpoints": true
+  },
+  {
+   "idx": 13,
+   "version": "7",
+   "when": 1782772042087,
+   "tag": "0013_service_cadence_weekly",
+   "breakpoints": true
+  },
+  {
+   "idx": 14,
+   "version": "7",
+   "when": 1782772142087,
+   "tag": "0014_service_cadence_four_monthly",
+   "breakpoints": true
+  }
+ ]
+}
