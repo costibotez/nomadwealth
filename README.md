@@ -89,5 +89,5 @@ Self-host license — see your purchase for terms. You get the full source and r
 it on your own infrastructure; the license gates use and updates, never your data.
 
 <div align="center">
-<sub>Built for people who want the whole picture, and want it private.</sub>
+<sub>Built by <a href="https://nomad-developer.co.uk">Nomad-Developer</a> · for people who want the whole picture, and want it private.</sub>
 </div>

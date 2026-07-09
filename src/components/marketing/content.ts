@@ -138,12 +138,13 @@ export const PRICING = [
 ];
 
 /**
- * Deploy-to-Vercel URL. The repo is a placeholder the vendor points at their
- * public template; env vars are declared so Vercel prompts for them, and the
- * Neon storage integration auto-provisions DATABASE_URL.
+ * Deploy-to-Vercel URL. Points at the PUBLIC deploy-template repo (kept in sync
+ * via scripts/sync-public.sh); env vars are declared so Vercel prompts for them,
+ * and the Neon storage integration auto-provisions DATABASE_URL. Override with
+ * NEXT_PUBLIC_REPO_URL if you fork the template.
  */
 export const REPO_URL =
-  process.env.NEXT_PUBLIC_REPO_URL ?? "https://github.com/nomadwealth/nomadwealth";
+  process.env.NEXT_PUBLIC_REPO_URL ?? "https://github.com/costibotez/nomadwealth";
 
 export const DEPLOY_URL =
   `https://vercel.com/new/clone?repository-url=${encodeURIComponent(REPO_URL)}` +
