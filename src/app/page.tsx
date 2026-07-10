@@ -11,6 +11,7 @@ import {
 } from "@/components/marketing/Sections";
 import { Footer } from "@/components/marketing/Footer";
 import { PromoBanner } from "@/components/marketing/PromoBanner";
+import { StructuredData } from "@/components/marketing/StructuredData";
 import { getActiveCampaign } from "@/lib/campaign";
 
 const description =
@@ -43,6 +44,7 @@ export default async function LandingPage() {
   const campaign = await getActiveCampaign();
   return (
     <div className="min-h-screen bg-bg text-text">
+      <StructuredData />
       <PromoBanner campaign={campaign} />
       <PublicHeader />
       <main>
