@@ -6,9 +6,11 @@
  * The app verifies it against the embedded PUBLIC key (below) with Web Crypto —
  * no network call, so no data (opaque key or otherwise) ever leaves the install.
  *
- * Optional remote check: if LICENSE_API_URL is set, we additionally POST just
- * the opaque { key } for revocation checks — never any financial data. This is
- * off by default (the product's whole pitch is "we can't see your data").
+ * Revocation check: on activation we POST just the opaque { key } to the
+ * revocation endpoint (LICENSE_API_URL, or a baked vendor default) so leaked or
+ * refunded keys can be disabled — never any financial data, and the check fails
+ * OPEN so a network blip never bricks an install. Disable per install with
+ * LICENSE_API_URL="".
  *
  * Graceful degradation: an empty key, or a "NW-TRIAL-*" key, activates a
  * functional TRIAL tier so a buyer is never hard-blocked mid-onboarding.
@@ -28,6 +30,16 @@ export interface LicenseResult {
   tier: LicenseTier;
   updatesUntil?: string;
   error?: string;
+}
+
+/**
+ * Whether a verified license is enough to FINISH first-run setup. A purchased
+ * key (self-host / updates) is required; an empty/invalid/trial key is not.
+ * This is the gate that closes the free-deploy loophole — see
+ * /api/setup/complete, which re-verifies the signed key and calls this.
+ */
+export function licenseAllowsSetupCompletion(r: LicenseResult): boolean {
+  return r.valid && r.tier !== "trial";
 }
 
 const enc = new TextEncoder();
@@ -98,11 +110,16 @@ export async function verifyLicenseKey(rawKey: string): Promise<LicenseResult> {
  * Optional opaque remote revocation check. Sends ONLY the key. No-op (returns
  * the offline result) unless LICENSE_API_URL is configured.
  */
+// Baked vendor revocation endpoint. Applied when LICENSE_API_URL is unset so
+// leaked/refunded keys can be killed across installs (sends ONLY the opaque
+// key). Set LICENSE_API_URL="" on an install to opt out entirely.
+const DEFAULT_LICENSE_API_URL = "https://admin.nomadwealth.app/api/license/check";
+
 export async function remoteKeyCheck(
   key: string,
   offline: LicenseResult,
 ): Promise<LicenseResult> {
-  const url = process.env.LICENSE_API_URL;
+  const url = process.env.LICENSE_API_URL ?? DEFAULT_LICENSE_API_URL;
   if (!url || !offline.valid) return offline;
   try {
     const res = await fetch(url, {

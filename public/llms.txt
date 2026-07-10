@@ -1,0 +1,22 @@
+# NomadWealth
+
+> Self-hostable personal net-worth & investment cockpit. Track public holdings, real estate, private loans, business income, cash and crypto — multi-currency, with a FIRE projection — on your own Vercel and your own Neon Postgres. The vendor cannot see your data: it lives only in your infrastructure.
+
+NomadWealth is a product you self-host, not a SaaS you log into. Buyers deploy it to their own Vercel account and connect their own Neon Postgres via a one-click setup wizard; financial data never reaches the vendor. Sold as a one-time self-host license with optional yearly updates, plus an optional managed-hosting plan.
+
+## Product
+- [Overview & pricing](https://www.nomadwealth.app/): what it is, features, plans
+- [Live demo](https://www.nomadwealth.app/demo): click through the cockpit with sample data, no signup
+- [Cockpit tour](https://www.nomadwealth.app/cockpit): the dashboard surfaces
+- [Security & privacy](https://www.nomadwealth.app/security): the no-vendor-data model, offline license activation
+
+## Key facts
+- Self-hosted on your own Vercel + Neon Postgres; runs with only DATABASE_URL + SESSION_SECRET.
+- Multi-asset: public holdings, real estate, private loans receivable, business income, cash, crypto — one net-worth model.
+- Multi-currency (EUR / USD / GBP / RON) with live FX; forward-looking FIRE / net-worth projection with read-only share links.
+- Analytics: performance, dividends, realized/unrealized P/L, concentration flags, watchlist & price alerts, CSV/Excel import.
+- Privacy by design: no analytics on financial values, no error payloads; license keys are verified offline (Ed25519).
+- Pricing: one-time self-host license (~€149) with 1 year of updates, ~€59/yr optional renewal, ~€12/mo optional managed hosting.
+
+## Contact
+- [Feedback & support](https://www.nomadwealth.app/feedback)

@@ -107,6 +107,15 @@ export function SetupWizard() {
         setLicActive(false);
         return;
       }
+      // A trial/empty key is not enough to finish setup — a purchased key is
+      // required (the server enforces this too; this is the friendly heads-up).
+      if (res.tier === "trial") {
+        setLicError(
+          "That looks like a trial or empty key. Enter the license key emailed after your purchase to finish setup.",
+        );
+        setLicActive(false);
+        return;
+      }
       setLicActive(true);
       setLicTier(res.tier);
     } catch (e) {
@@ -283,14 +292,14 @@ export function SetupWizard() {
             icon={<KeyRound size={16} />}
             iconColor="var(--accent)"
             title="Activate your license & set a password"
-            desc="Find your key in the purchase email — activation is offline-friendly. Leave it blank to start a trial. Then choose the password you'll use to unlock this dashboard."
+            desc="Paste the license key from your purchase email — activation is offline, no phone-home. A valid key is required to finish setup. Then choose the password you'll use to unlock this dashboard."
           >
             <label className="mb-2 block text-[13px] text-muted">License key</label>
             <TextField
               mono
               value={licenseStr}
               onChange={(e) => setLicenseStr(e.target.value)}
-              placeholder="NW1.xxxxxxxx…  (or leave blank for a trial)"
+              placeholder="NW1.xxxxxxxx…"
               aria-label="License key"
               style={{ letterSpacing: "0.03em" }}
             />
@@ -300,7 +309,7 @@ export function SetupWizard() {
               </Button>
               {licActive && (
                 <span className="text-[14px] text-[color:var(--nw-gain)]">
-                  ✓ {licTier === "trial" ? "Trial active" : "Activated"} · all features unlocked
+                  ✓ Activated · {licTier === "updates" ? "license + updates" : "self-host license"}
                 </span>
               )}
             </div>

@@ -43,6 +43,7 @@ const MARKETING_PATHS = [
   "/legal",
   "/sitemap.xml",
   "/robots.txt",
+  "/llms.txt",
   "/opengraph-image",
   "/manifest.webmanifest",
 ];

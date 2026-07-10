@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/cockpit", "/security", "/feedback"],
+      allow: ["/", "/welcome", "/cockpit", "/demo", "/security", "/feedback", "/llms.txt"],
       disallow: ["/dashboard", "/setup", "/api/", "/share/", "/login"],
     },
     sitemap: `${base}/sitemap.xml`,

@@ -46,6 +46,7 @@ export function Footer() {
               ["Security & Privacy", "/security"],
               ["Privacy Policy", "/security"],
               ["License (EULA)", "/security#license"],
+              ["Sitemap", "/sitemap.xml"],
             ].map(([l, h]) => (
               <li key={l}>
                 <Link href={h} className="text-text-2 transition-colors hover:text-brand">

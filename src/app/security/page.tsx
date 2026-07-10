@@ -34,7 +34,7 @@ const PILLARS = [
   {
     icon: KeyRound,
     title: "Offline license activation",
-    body: "License keys are verified locally with a public key. Activation never transmits anything but the opaque key — and only if you enable an optional revocation check.",
+    body: "License keys are verified locally with a public key. The only network call is a revocation check on activation that sends nothing but the opaque key (so refunded or leaked keys can be disabled) — never any financial data. Set LICENSE_API_URL=\"\" to turn it off entirely.",
   },
   {
     icon: ShieldCheck,

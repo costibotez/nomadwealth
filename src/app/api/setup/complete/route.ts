@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { appConfig } from "@/db/schema";
+import { appConfig, license } from "@/db/schema";
 import { sql } from "drizzle-orm";
 import { getOwner } from "@/lib/owner";
 import { isUnconfigured, resolveDatabaseUrl } from "@/lib/setup-guard";
 import { clearSetupStateCache } from "@/lib/setup-state";
+import { verifyLicenseKey, remoteKeyCheck, licenseAllowsSetupCompletion } from "@/lib/license";
 import { SCHEMA_VERSION } from "@/db/migrations.generated";
 import {
   SESSION_COOKIE,
@@ -30,6 +31,25 @@ export async function POST(req: Request) {
       { ok: false, error: "Set an owner password before finishing." },
       { status: 400 },
     );
+  }
+  // Require a VALID, signed, non-trial license to finish setup. We re-verify the
+  // stored key's Ed25519 signature here (not just trust a stored tier), so a
+  // manually-inserted license row or an empty/trial key cannot complete setup.
+  // Forge-proof: only the vendor's private key can sign a valid non-trial key.
+  {
+    const rows = await db.select({ key: license.key }).from(license).limit(1);
+    const key = rows[0]?.key ?? "";
+    const result = await remoteKeyCheck(key, await verifyLicenseKey(key));
+    if (!licenseAllowsSetupCompletion(result)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "A valid license key is required to finish setup. Activate the key emailed after your purchase in the License step.",
+        },
+        { status: 400 },
+      );
+    }
   }
   if (!resolveDatabaseUrl()) {
     return NextResponse.json(
