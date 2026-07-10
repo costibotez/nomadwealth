@@ -64,13 +64,17 @@ export function Sidebar() {
           collapsed ? "w-[68px]" : "w-60"
         }`}
       >
-        <div className="mb-4 flex items-center justify-between px-4">
-          <Link href="/dashboard" aria-label="NomadWealth" className="focusring rounded">
+        <div
+          className={`mb-4 flex px-4 ${
+            collapsed ? "flex-col items-center gap-3 px-0" : "items-center justify-between"
+          }`}
+        >
+          <Link href="/dashboard" aria-label="NomadWealth" className="focusring shrink-0 rounded">
             {collapsed ? <LogoMark size={26} /> : <Wordmark height={24} />}
           </Link>
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className="focusring rounded-lg p-1.5 text-ink-faint hover:bg-hover hover:text-ink"
+            className="focusring shrink-0 rounded-lg p-1.5 text-ink-faint hover:bg-hover hover:text-ink"
             aria-label="Toggle sidebar"
           >
             <ChevronLeft
