@@ -41,6 +41,7 @@ const MARKETING_PATHS = [
   "/security",
   "/feedback",
   "/changelog",
+  "/vs", // comparison landing pages (/vs/ghostfolio, /vs/spreadsheet)
   "/legal",
   "/sitemap.xml",
   "/robots.txt",
