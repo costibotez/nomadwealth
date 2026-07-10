@@ -18,6 +18,7 @@ import {
   pgEnum,
   date,
   uuid,
+  jsonb,
 } from "drizzle-orm/pg-core";
 
 // ---- Enums ---------------------------------------------------------------
@@ -498,6 +499,15 @@ export const owner = pgTable("owner", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email"),
   passwordHash: text("password_hash").notNull(),
+  // Optional TOTP two-factor auth (RFC 6238). `totpSecret` is a base32 secret;
+  // it may be present-but-unconfirmed (written by /api/2fa/setup) — login only
+  // requires a code when `totpEnabled` is true. `backupCodes` holds PBKDF2
+  // hashes of single-use recovery codes (same hash format as the password);
+  // each is removed from the array as it is consumed. All of this lives only in
+  // the buyer's own Neon DB — see CLAUDE.md ("no vendor data access").
+  totpSecret: text("totp_secret"),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  backupCodes: jsonb("backup_codes").$type<string[]>(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

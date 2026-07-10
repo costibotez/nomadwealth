@@ -9,6 +9,8 @@ function LoginForm() {
   const params = useSearchParams();
   const from = params.get("from") || "/dashboard";
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [twoFactor, setTwoFactor] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -20,16 +22,23 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(twoFactor ? { password, code } : { password }),
       });
-      if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.ok) {
         router.replace(from);
         router.refresh();
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? "Login failed");
-        setLoading(false);
+        return;
       }
+      if (data.twoFactorRequired) {
+        // Password accepted — reveal the code step.
+        setTwoFactor(true);
+        setError(res.ok ? null : (data.error ?? "Enter your authentication code"));
+        setLoading(false);
+        return;
+      }
+      setError(data.error ?? "Login failed");
+      setLoading(false);
     } catch {
       setError("Network error");
       setLoading(false);
@@ -62,9 +71,34 @@ function LoginForm() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="focusring w-full rounded-xl border border-border bg-panel px-3 py-2.5 text-ink placeholder:text-ink-faint"
+            readOnly={twoFactor}
+            className="focusring w-full rounded-xl border border-border bg-panel px-3 py-2.5 text-ink placeholder:text-ink-faint read-only:opacity-60"
             placeholder="••••••••••••"
           />
+
+          {twoFactor && (
+            <div className="mt-4">
+              <label className="stat-label mb-2 block" htmlFor="code">
+                Authentication code
+              </label>
+              <input
+                id="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className="focusring mono w-full rounded-xl border border-border bg-panel px-3 py-2.5 tracking-widest text-ink placeholder:text-ink-faint"
+                placeholder="123456"
+                aria-describedby="code-help"
+              />
+              <p id="code-help" className="mt-1.5 text-xs text-ink-faint">
+                Enter the 6-digit code from your authenticator app, or a backup
+                code.
+              </p>
+            </div>
+          )}
 
           {error && (
             <p className="mt-3 text-sm text-loss" role="alert">
@@ -74,10 +108,18 @@ function LoginForm() {
 
           <button
             type="submit"
-            disabled={loading || password.length === 0}
+            disabled={
+              loading ||
+              password.length === 0 ||
+              (twoFactor && code.trim().length === 0)
+            }
             className="focusring mt-5 w-full rounded-xl bg-accent px-4 py-2.5 font-medium text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {loading ? "Unlocking…" : "Unlock"}
+            {loading
+              ? "Unlocking…"
+              : twoFactor
+                ? "Verify & unlock"
+                : "Unlock"}
           </button>
         </form>
       </div>

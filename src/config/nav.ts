@@ -18,6 +18,7 @@ import {
   Trash2,
   Upload,
   KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -45,5 +46,6 @@ export const NAV: NavItem[] = [
   { href: "/dashboard/wedding", label: "Wedding 2026", icon: Heart },
   { href: "/dashboard/sharing", label: "Share", icon: Share2 },
   { href: "/dashboard/license", label: "License", icon: KeyRound },
+  { href: "/dashboard/settings", label: "Security", icon: ShieldCheck },
   { href: "/dashboard/trash", label: "Trash", icon: Trash2 },
 ];

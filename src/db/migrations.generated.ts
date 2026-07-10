@@ -5,7 +5,7 @@
  * (see lib/migrate-runtime.ts). Regenerate with: pnpm gen:migrations
  */
 /* eslint-disable */
-export const SCHEMA_VERSION = "9999b_share_activation";
+export const SCHEMA_VERSION = "9999c_owner_2fa";
 
 export interface EmbeddedMigration {
   tag: string;
@@ -162,6 +162,14 @@ export const MIGRATIONS: EmbeddedMigration[] = [
     "tag": "9999b_share_activation",
     "statements": [
       "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"share_activation\" boolean DEFAULT false NOT NULL;"
+    ]
+  },
+  {
+    "tag": "9999c_owner_2fa",
+    "statements": [
+      "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"totp_secret\" text;",
+      "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"totp_enabled\" boolean DEFAULT false NOT NULL;",
+      "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"backup_codes\" jsonb;"
     ]
   }
 ];

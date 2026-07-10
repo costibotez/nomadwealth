@@ -70,6 +70,16 @@ migrations.push({
   tag: "9999b_share_activation",
   sql: `ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "share_activation" boolean DEFAULT false NOT NULL;`,
 });
+// Optional TOTP two-factor auth for the owner account. Idempotent so already
+// provisioned installs pick the columns up on the next boot/migrate run.
+migrations.push({
+  tag: "9999c_owner_2fa",
+  sql: `ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "totp_secret" text;
+--> statement-breakpoint
+ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "totp_enabled" boolean DEFAULT false NOT NULL;
+--> statement-breakpoint
+ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "backup_codes" jsonb;`,
+});
 
 // schemaVersion = the last tag, so app_config records exactly what was applied.
 const schemaVersion = migrations[migrations.length - 1].tag;
