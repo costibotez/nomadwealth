@@ -86,3 +86,24 @@ export async function setOwner(password: string, email?: string) {
   await db.delete(owner); // single-tenant: only ever one owner row
   await db.insert(owner).values({ passwordHash, email: email ?? null });
 }
+
+/**
+ * Rotate the owner password AFTER setup (Settings → Account password). Unlike
+ * setOwner this preserves the existing row — email and any 2FA config (TOTP
+ * secret, backup codes) survive a password change. If the install was still on
+ * the env DASHBOARD_PASSWORD fallback (no owner row), this creates the row,
+ * which makes the env password inert (login precedence) and unlocks app-managed
+ * 2FA. Returns whether a new owner row was created.
+ */
+export async function setOwnerPassword(
+  password: string,
+): Promise<{ created: boolean }> {
+  const passwordHash = await hashPassword(password);
+  const existing = await getOwner();
+  if (existing) {
+    await db.update(owner).set({ passwordHash }).where(eq(owner.id, existing.id));
+    return { created: false };
+  }
+  await db.insert(owner).values({ passwordHash, email: null });
+  return { created: true };
+}

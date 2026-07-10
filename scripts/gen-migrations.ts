@@ -80,6 +80,39 @@ ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "totp_enabled" boolean DEFAULT fals
 --> statement-breakpoint
 ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "backup_codes" jsonb;`,
 });
+// Price-alert notifications: delivery channels, Web Push subscriptions + VAPID
+// keys, and a once-only dispatch guard on price_alerts. Idempotent.
+migrations.push({
+  tag: "9999d_notifications",
+  sql: `CREATE TABLE IF NOT EXISTS "notification_channels" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"type" text NOT NULL,
+	"enabled" boolean DEFAULT false NOT NULL,
+	"config" jsonb,
+	"verified_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted_at" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "notification_channels_type_key" ON "notification_channels" ("type");
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "push_subscriptions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"endpoint" text NOT NULL,
+	"p256dh" text NOT NULL,
+	"auth" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "push_subscriptions_endpoint_key" ON "push_subscriptions" ("endpoint");
+--> statement-breakpoint
+ALTER TABLE "price_alerts" ADD COLUMN IF NOT EXISTS "notified_at" timestamp with time zone;
+--> statement-breakpoint
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "vapid_public_key" text;
+--> statement-breakpoint
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "vapid_private_key" text;`,
+});
 
 // schemaVersion = the last tag, so app_config records exactly what was applied.
 const schemaVersion = migrations[migrations.length - 1].tag;

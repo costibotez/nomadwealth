@@ -85,7 +85,7 @@ export const OWN_DATA = [
   {
     icon: KeyRound,
     title: "Your API keys",
-    body: "Bring your own price-data key for quotes and alerts. Nothing routes through our servers.",
+    body: "Bring your own keys — optional price-data for quotes, Resend for email alerts. Browser push is keyless. Nothing routes through our servers.",
   },
 ];
 
@@ -94,7 +94,7 @@ export const FEATURES = [
   { tag: "MULTI-ASSET", title: "Beyond just stocks", body: "Public holdings, real estate, private loans receivable, cash and business income in one model." },
   { tag: "FIRE", title: "Projection you can steer", body: "Forward net-worth model with editable savings, return and target — and read-only share links." },
   { tag: "ONBOARDING", title: "CSV & Excel import", body: "Map columns from any bank or broker export, or add assets by hand. Guided empty states throughout." },
-  { tag: "WATCHLIST", title: "Alerts, your keys", body: "Track tickers and set price alerts using your own market-data API key." },
+  { tag: "ALERTS", title: "Price alerts that reach you", body: "Track tickers and get price alerts by browser push or email — checked on the server, so they fire even when the app is closed." },
   { tag: "SETUP", title: "First-run wizard", body: "Auto-migrations, Neon connect and license activation — cockpit live in minutes." },
 ];
 
@@ -107,6 +107,7 @@ export const COMPARE_ROWS = [
   { label: "Business income", us: "✓", cloud: "~", ghost: "✕" },
   { label: "First-class multi-currency", us: "✓", cloud: "~", ghost: "~" },
   { label: "FIRE projection", us: "✓", cloud: "✕", ghost: "✕" },
+  { label: "Price alerts (push + email)", us: "✓", cloud: "~", ghost: "~" },
   { label: "One-time price", us: "✓", cloud: "✕", ghost: "✓" },
 ];
 

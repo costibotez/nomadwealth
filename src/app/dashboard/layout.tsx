@@ -3,12 +3,17 @@ import { CurrencyProvider } from "@/components/CurrencyProvider";
 import { Sidebar } from "@/components/Sidebar";
 import { TopBar } from "@/components/TopBar";
 import { TrialBanner } from "@/components/license/TrialBanner";
+import { ensureSchemaCurrent } from "@/lib/ensure-migrated";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Apply any migrations added since this install was set up (the setup wizard
+  // can't — it 403s once configured). Cached per instance; no-ops when current.
+  await ensureSchemaCurrent();
+
   return (
     <CurrencyProvider>
       <div className="flex min-h-screen">

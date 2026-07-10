@@ -17,6 +17,17 @@ export const metadata: Metadata = {
 const RELEASES: { date: string; version: string; items: string[] }[] = [
   {
     date: "2026-07-10",
+    version: "1.5",
+    items: [
+      "Price alerts now reach you by browser push or email — checked on the server, so they fire even when the app is closed.",
+      "Change your owner password right from Settings, and enable optional two-factor (TOTP) for login.",
+      "Crypto watchlist charts restored on a keyless data source — no API key required.",
+      "Schema updates now apply automatically on your next deploy — no manual migration step for existing installs.",
+      "Polish: the collapsed sidebar now shows the crisp NomadWealth mark instead of a squeezed logo.",
+    ],
+  },
+  {
+    date: "2026-07-10",
     version: "1.4",
     items: [
       "License revocation with one-click revoke from the admin console.",

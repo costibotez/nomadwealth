@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ShieldCheck, EyeOff, Server, KeyRound } from "lucide-react";
+import { ShieldCheck, EyeOff, Server, KeyRound, Lock, Bell } from "lucide-react";
 import { PublicHeader } from "@/components/nw/PublicHeader";
 import { Footer } from "@/components/marketing/Footer";
 import { Eyebrow } from "@/components/nw/primitives";
@@ -40,6 +40,16 @@ const PILLARS = [
     icon: ShieldCheck,
     title: "No tracking on your money",
     body: "We ship no analytics that capture financial values and no error reporting with data payloads. The only telemetry is a strictly opt-in activation ping (off by default) that sends a hashed key + tier — never any financial data.",
+  },
+  {
+    icon: Lock,
+    title: "Your login, hardened",
+    body: "The owner password is hashed with PBKDF2 (Web Crypto) and stored only in your database. Change it any time from Settings, and turn on optional TOTP two-factor — no third-party auth service involved.",
+  },
+  {
+    icon: Bell,
+    title: "Alerts on your terms",
+    body: "Price alerts are delivered by browser push (keys minted on your own install) or email through your own Resend key. Delivery never passes through vendor servers — we can't see that an alert fired, let alone its numbers.",
   },
 ];
 

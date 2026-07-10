@@ -1,7 +1,9 @@
 /**
  * OHLC candle history for the watchlist charts. Server-only.
  *  - Stocks (US + BVB): Yahoo Finance chart API.
- *  - Crypto: Binance public klines (keyless), e.g. BTC -> BTCUSDT.
+ *  - Crypto: Coinbase Exchange public candles (keyless), e.g. BTC -> BTC-USD.
+ *    (Binance 451s cloud IPs; CryptoCompare now requires an API key — both
+ *    unusable keyless, which the self-host invariant requires.)
  */
 import "server-only";
 import { toYahooTicker } from "@/lib/prices";
@@ -23,13 +25,17 @@ const YAHOO_RANGE: Record<CandleRange, { interval: string; range: string }> = {
   "1Y": { interval: "1d", range: "1y" },
 };
 
-// CryptoCompare is global + keyless (Binance geo-blocks US/Vercel IPs with 451).
-const CC_RANGE: Record<CandleRange, { endpoint: "histominute" | "histohour" | "histoday"; aggregate: number; limit: number }> = {
-  "1D": { endpoint: "histominute", aggregate: 5, limit: 288 },
-  "1W": { endpoint: "histohour", aggregate: 1, limit: 168 },
-  "1M": { endpoint: "histoday", aggregate: 1, limit: 31 },
-  "1Y": { endpoint: "histoday", aggregate: 1, limit: 365 },
+// Coinbase Exchange candles: keyless, global (works from cloud IPs). Each range
+// picks a granularity (seconds) + a look-back window. Coinbase caps a response
+// at 300 candles, so 1Y (365 daily) is fetched in chunks and concatenated.
+const COINBASE_GRANULARITY = { min5: 300, hour1: 3600, day1: 86400 } as const;
+const CB_RANGE: Record<CandleRange, { granularity: number; spanSeconds: number }> = {
+  "1D": { granularity: COINBASE_GRANULARITY.min5, spanSeconds: 1 * 86400 },
+  "1W": { granularity: COINBASE_GRANULARITY.hour1, spanSeconds: 7 * 86400 },
+  "1M": { granularity: COINBASE_GRANULARITY.day1, spanSeconds: 31 * 86400 },
+  "1Y": { granularity: COINBASE_GRANULARITY.day1, spanSeconds: 365 * 86400 },
 };
+const CB_MAX_CANDLES = 300;
 
 async function yahooCandles(ticker: string, range: CandleRange): Promise<Candle[]> {
   const { interval, range: r } = YAHOO_RANGE[range];
@@ -67,22 +73,51 @@ async function yahooCandles(ticker: string, range: CandleRange): Promise<Candle[
   return [];
 }
 
-async function cryptoCompareCandles(symbol: string, range: CandleRange): Promise<Candle[]> {
-  const { endpoint, aggregate, limit } = CC_RANGE[range];
-  const fsym = symbol.trim().toUpperCase();
+// One Coinbase request (≤300 candles). Returns [time, low, high, open, close,
+// volume] rows, newest first; we normalize to our Candle shape.
+async function coinbaseChunk(
+  product: string,
+  granularity: number,
+  startSec: number,
+  endSec: number,
+): Promise<Candle[]> {
+  const url =
+    `https://api.exchange.coinbase.com/products/${encodeURIComponent(product)}/candles` +
+    `?granularity=${granularity}&start=${new Date(startSec * 1000).toISOString()}` +
+    `&end=${new Date(endSec * 1000).toISOString()}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; net-worth-dashboard/1.0)" },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!res.ok) return [];
+  const rows = (await res.json()) as [number, number, number, number, number, number][];
+  if (!Array.isArray(rows)) return [];
+  return rows.map(([time, low, high, open, close]) => ({ time, open, high, low, close }));
+}
+
+async function coinbaseCandles(symbol: string, range: CandleRange): Promise<Candle[]> {
+  // Normalize to a Coinbase product: accept bare tickers ("BTC") as well as
+  // stored pairs ("BTC-USD", "BTCUSDT") by stripping any quote-currency suffix
+  // before appending "-USD".
+  const base = symbol.trim().toUpperCase().replace(/[-/]?(USDT|USD)$/, "");
+  const product = `${base}-USD`;
+  const { granularity, spanSeconds } = CB_RANGE[range];
+  const now = Math.floor(Date.now() / 1000);
+  const chunkSpan = granularity * CB_MAX_CANDLES;
+
+  // Walk the window in ≤300-candle chunks (usually one; 1Y needs two).
+  const chunks: Promise<Candle[]>[] = [];
+  for (let end = now; end > now - spanSeconds; end -= chunkSpan) {
+    const start = Math.max(end - chunkSpan, now - spanSeconds);
+    chunks.push(coinbaseChunk(product, granularity, start, end));
+  }
+
   try {
-    const url = `https://min-api.cryptocompare.com/data/v2/${endpoint}?fsym=${encodeURIComponent(fsym)}&tsym=USD&limit=${limit}&aggregate=${aggregate}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return [];
-    const json = (await res.json()) as {
-      Response?: string;
-      Data?: { Data?: { time: number; open: number; high: number; low: number; close: number }[] };
-    };
-    if (json.Response && json.Response !== "Success") return [];
-    const rows = json.Data?.Data ?? [];
-    return rows
-      .filter((r) => r.open > 0 || r.close > 0)
-      .map((r) => ({ time: r.time, open: r.open, high: r.high, low: r.low, close: r.close }));
+    const merged = (await Promise.all(chunks)).flat();
+    // Dedupe by timestamp and sort ascending (lightweight-charts requires it).
+    const byTime = new Map<number, Candle>();
+    for (const c of merged) if (c.close > 0) byTime.set(c.time, c);
+    return [...byTime.values()].sort((a, b) => a.time - b.time);
   } catch {
     return [];
   }
@@ -90,7 +125,7 @@ async function cryptoCompareCandles(symbol: string, range: CandleRange): Promise
 
 export async function fetchCandles(symbol: string, assetClass: string, range: CandleRange): Promise<{ candles: Candle[]; source: string }> {
   if (assetClass === "crypto") {
-    return { candles: await cryptoCompareCandles(symbol, range), source: "cryptocompare" };
+    return { candles: await coinbaseCandles(symbol, range), source: "coinbase" };
   }
   const ticker = toYahooTicker(symbol, assetClass);
   if (!ticker) return { candles: [], source: "none" };

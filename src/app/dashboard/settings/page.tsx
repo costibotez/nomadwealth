@@ -1,6 +1,8 @@
 import { Download } from "lucide-react";
 import { getOwner } from "@/lib/owner";
+import { OwnerPasswordSettings } from "@/components/settings/OwnerPasswordSettings";
 import { TwoFactorSettings } from "@/components/settings/TwoFactorSettings";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -20,13 +22,18 @@ export default async function SettingsPage() {
         </p>
       </header>
 
-      <TwoFactorSettings
-        hasOwner={Boolean(owner)}
-        enabled={Boolean(owner?.totpEnabled)}
-        backupRemaining={backupRemaining}
-      />
+      <div className="space-y-6">
+        <OwnerPasswordSettings hasOwner={Boolean(owner)} />
 
-      <div className="card mt-6 max-w-xl p-6">
+        <TwoFactorSettings
+          hasOwner={Boolean(owner)}
+          enabled={Boolean(owner?.totpEnabled)}
+          backupRemaining={backupRemaining}
+        />
+
+        <NotificationSettings />
+
+        <div className="card max-w-xl p-6">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent-soft text-accent">
             <Download size={18} />
@@ -46,6 +53,7 @@ export default async function SettingsPage() {
         >
           <Download size={16} /> Download export (.json)
         </a>
+        </div>
       </div>
     </div>
   );

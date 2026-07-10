@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Trash2, Bell, BellRing, X, RefreshCw, LineChart } from "lucide-react";
 import { Card, EmptyState, Badge } from "@/components/ui/primitives";
 import { Modal, Field, inputClass } from "@/components/ui/Modal";
@@ -229,6 +230,17 @@ function SymbolDrawer({ item, quote, alerts, onClose }: { item: Item; quote?: Qu
   const readonly = useReadonly();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Portal to <body>: the watchlist root has `animate-fade-up`, whose settled
+  // transform makes `position: fixed` anchor to that container instead of the
+  // viewport — so an un-portaled drawer opens at the container top (needs a
+  // scroll-up on long lists). Same reason Modal portals. Escape closes it.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const sym = item.symbol.replace(/^BVB:/, "");
   const currency = quote?.currency ?? (item.assetClass === "ro_stock" ? "RON" : "USD");
 
@@ -245,7 +257,8 @@ function SymbolDrawer({ item, quote, alerts, onClose }: { item: Item; quote?: Qu
     });
   }
 
-  return (
+  if (!mounted) return null;
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 h-full w-full max-w-xl animate-fade-up overflow-y-auto border-l border-border bg-panel p-6">
@@ -312,6 +325,7 @@ function SymbolDrawer({ item, quote, alerts, onClose }: { item: Item; quote?: Qu
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

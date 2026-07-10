@@ -286,6 +286,9 @@ export const priceAlerts = pgTable("price_alerts", {
   triggeredAt: timestamp("triggered_at", { withTimezone: true }),
   triggeredPrice: numeric("triggered_price", MONEY),
   acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
+  // Set when out-of-app notifications (push/email) were dispatched for this
+  // trigger, so the cron dispatcher fires exactly once and never re-spams.
+  notifiedAt: timestamp("notified_at", { withTimezone: true }),
   note: text("note"),
   ...timestamps,
 });
@@ -490,6 +493,10 @@ export const appConfig = pgTable("app_config", {
   // (hashed key + tier only, never financial data) to the vendor on activation.
   // Honors the "telemetry is opt-in" invariant. See lib/activation-ping.ts.
   shareActivation: boolean("share_activation").notNull().default(false),
+  // Web Push VAPID keypair, generated once on first push-subscribe. Both live
+  // only in the buyer's own Neon — nothing is shared with the vendor.
+  vapidPublicKey: text("vapid_public_key"),
+  vapidPrivateKey: text("vapid_private_key"),
   ...timestamps,
 });
 
@@ -536,10 +543,37 @@ export const importJobs = pgTable("import_jobs", {
     .defaultNow(),
 });
 
+// ---- Notifications -------------------------------------------------------
+// How the owner wants price-alert notifications delivered. One row per channel
+// type (unique). `config` holds channel-specific settings (e.g. the email
+// address). Everything lives only in the buyer's own Neon — see CLAUDE.md.
+export const notificationChannels = pgTable("notification_channels", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(), // webpush | email
+  enabled: boolean("enabled").notNull().default(false),
+  config: jsonb("config").$type<Record<string, string>>(),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  ...timestamps,
+});
+
+// Web Push subscriptions (one per browser/device the owner enabled). Keyed by
+// the push endpoint; p256dh + auth are the client public keys used to encrypt.
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type AppConfig = typeof appConfig.$inferSelect;
 export type Owner = typeof owner.$inferSelect;
 export type License = typeof license.$inferSelect;
 export type ImportJob = typeof importJobs.$inferSelect;
+export type NotificationChannel = typeof notificationChannels.$inferSelect;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
 // Convenience type exports
 export type ShareLink = typeof shareLinks.$inferSelect;

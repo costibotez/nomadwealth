@@ -28,6 +28,8 @@ export function Footer() {
               ["Changelog", "/changelog"],
               ["Setup wizard", "/setup"],
               ["Pricing", "/#pricing"],
+              ["vs Ghostfolio", "/vs/ghostfolio"],
+              ["vs a spreadsheet", "/vs/spreadsheet"],
             ].map(([l, h]) => (
               <li key={l}>
                 <Link href={h} className="text-text-2 transition-colors hover:text-brand">

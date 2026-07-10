@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Check } from "lucide-react";
 import { Eyebrow } from "@/components/nw/primitives";
 import { OWN_DATA, FEATURES, COMPARE_ROWS, PRICING, WHO_ITS_FOR, TESTIMONIALS } from "./content";
@@ -162,6 +163,22 @@ export function ComparisonSection() {
           </div>
         ))}
       </div>
+      <p className="mt-6 text-[14px] text-muted">
+        See the full breakdown:{" "}
+        <Link
+          href="/vs/ghostfolio"
+          className="font-medium text-brand underline-offset-4 hover:underline"
+        >
+          NomadWealth vs Ghostfolio
+        </Link>{" "}
+        ·{" "}
+        <Link
+          href="/vs/spreadsheet"
+          className="font-medium text-brand underline-offset-4 hover:underline"
+        >
+          NomadWealth vs a spreadsheet
+        </Link>
+      </p>
     </section>
   );
 }

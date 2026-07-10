@@ -5,7 +5,7 @@
  * (see lib/migrate-runtime.ts). Regenerate with: pnpm gen:migrations
  */
 /* eslint-disable */
-export const SCHEMA_VERSION = "9999c_owner_2fa";
+export const SCHEMA_VERSION = "9999d_notifications";
 
 export interface EmbeddedMigration {
   tag: string;
@@ -170,6 +170,18 @@ export const MIGRATIONS: EmbeddedMigration[] = [
       "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"totp_secret\" text;",
       "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"totp_enabled\" boolean DEFAULT false NOT NULL;",
       "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"backup_codes\" jsonb;"
+    ]
+  },
+  {
+    "tag": "9999d_notifications",
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS \"notification_channels\" (\n\t\"id\" serial PRIMARY KEY NOT NULL,\n\t\"type\" text NOT NULL,\n\t\"enabled\" boolean DEFAULT false NOT NULL,\n\t\"config\" jsonb,\n\t\"verified_at\" timestamp with time zone,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"updated_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"deleted_at\" timestamp with time zone\n);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS \"notification_channels_type_key\" ON \"notification_channels\" (\"type\");",
+      "CREATE TABLE IF NOT EXISTS \"push_subscriptions\" (\n\t\"id\" serial PRIMARY KEY NOT NULL,\n\t\"endpoint\" text NOT NULL,\n\t\"p256dh\" text NOT NULL,\n\t\"auth\" text NOT NULL,\n\t\"created_at\" timestamp with time zone DEFAULT now() NOT NULL\n);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS \"push_subscriptions_endpoint_key\" ON \"push_subscriptions\" (\"endpoint\");",
+      "ALTER TABLE \"price_alerts\" ADD COLUMN IF NOT EXISTS \"notified_at\" timestamp with time zone;",
+      "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"vapid_public_key\" text;",
+      "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"vapid_private_key\" text;"
     ]
   }
 ];
