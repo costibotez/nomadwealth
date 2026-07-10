@@ -20,6 +20,8 @@ const DEMO_TABS = [
   { href: "/demo/real-estate", label: "Real Estate", navHref: "/dashboard/real-estate" },
   { href: "/demo/loans", label: "Loans", navHref: "/dashboard/loans" },
   { href: "/demo/businesses", label: "Businesses", navHref: "/dashboard/businesses" },
+  { href: "/demo/clients", label: "Clients", navHref: "/dashboard/clients" },
+  { href: "/demo/import", label: "Import", navHref: "/dashboard/import" },
   { href: "/demo/projection", label: "FIRE / Projection", navHref: "/dashboard/projection" },
 ];
 

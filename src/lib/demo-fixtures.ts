@@ -7,6 +7,7 @@
 import type { TransactionRow } from "@/db/queries";
 import type { DividendModel } from "@/components/dividends/DividendsClient";
 import type { LoanCard, DueSoon } from "@/components/loans/LoansClient";
+import type { ClientsModel } from "@/components/clients/ClientsClient";
 
 const lot = (t: Omit<TransactionRow, "commission" | "saleTax" | "maturityDate" | "notes"> & Partial<TransactionRow>): TransactionRow => ({
   commission: null,
@@ -523,3 +524,57 @@ export const DEMO_BUSINESSES: DemoBusiness[] = [
     };
   })(),
 ];
+
+// ---- Clients (freelance / consulting revenue — mirrors ClientsModel) --------
+export const DEMO_CLIENTS: ClientsModel = {
+  clients: [
+    {
+      id: 1,
+      name: "Acme Studio",
+      status: "active",
+      currency: "EUR",
+      notes: "Design retainer, renews yearly.",
+      services: [
+        { id: 1, type: "retainer", label: "Monthly retainer", amount: 2000, currency: "EUR", cadence: "monthly", timesPerYear: 12, hours: null, rate: null, startDate: "2025-02-01", renewalDate: "2026-08-01", active: true, notes: null, monthlyEur: 2000, oneOffEur: 0 },
+      ],
+      mrrEur: 2000,
+      arrEur: 24000,
+      oneOffEur: 0,
+    },
+    {
+      id: 2,
+      name: "Blue Harbor Ltd",
+      status: "active",
+      currency: "USD",
+      notes: null,
+      services: [
+        { id: 2, type: "project", label: "Website rebuild", amount: 6000, currency: "USD", cadence: "one_off", timesPerYear: null, hours: null, rate: null, startDate: "2026-05-10", renewalDate: null, active: true, notes: "Delivered", monthlyEur: 0, oneOffEur: 5550 },
+        { id: 3, type: "support", label: "Care plan", amount: 400, currency: "USD", cadence: "monthly", timesPerYear: 12, hours: null, rate: null, startDate: "2026-06-01", renewalDate: "2027-06-01", active: true, notes: null, monthlyEur: 370, oneOffEur: 0 },
+      ],
+      mrrEur: 370,
+      arrEur: 4440,
+      oneOffEur: 5550,
+    },
+    {
+      id: 3,
+      name: "Nomad Collective",
+      status: "active",
+      currency: "EUR",
+      notes: null,
+      services: [
+        { id: 4, type: "hourly", label: "Advisory", amount: 90, currency: "EUR", cadence: "hourly", timesPerYear: null, hours: 10, rate: 90, startDate: "2025-11-01", renewalDate: null, active: true, notes: "~10h/mo", monthlyEur: 900, oneOffEur: 0 },
+      ],
+      mrrEur: 900,
+      arrEur: 10800,
+      oneOffEur: 0,
+    },
+  ],
+  totalMrrEur: 3270,
+  totalArrEur: 39240,
+  totalOneOffEur: 5550,
+  activeCount: 3,
+  renewals: [
+    { clientId: 1, clientName: "Acme Studio", type: "retainer", label: "Monthly retainer", renewalDate: "2026-08-01", daysUntil: 22, amountEur: 2000 },
+    { clientId: 2, clientName: "Blue Harbor Ltd", type: "support", label: "Care plan", renewalDate: "2027-06-01", daysUntil: 326, amountEur: 370 },
+  ],
+};
