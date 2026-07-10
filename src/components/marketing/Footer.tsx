@@ -25,6 +25,7 @@ export function Footer() {
             {[
               ["Overview", "/"],
               ["Cockpit", "/cockpit"],
+              ["Changelog", "/changelog"],
               ["Setup wizard", "/setup"],
               ["Pricing", "/#pricing"],
             ].map(([l, h]) => (

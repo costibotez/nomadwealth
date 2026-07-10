@@ -40,6 +40,7 @@ const MARKETING_PATHS = [
   "/demo", // public, fabricated-data walkthrough — see src/lib/demo-fixtures.ts
   "/security",
   "/feedback",
+  "/changelog",
   "/legal",
   "/sitemap.xml",
   "/robots.txt",

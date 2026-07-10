@@ -1,6 +1,6 @@
 import { PRICING } from "./content";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nomadwealth.app";
+const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nomadwealth.app").replace(/\/+$/, "");
 
 /**
  * JSON-LD structured data (schema.org SoftwareApplication + Offers) for the
