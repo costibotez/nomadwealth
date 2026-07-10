@@ -49,6 +49,28 @@ export const WHO_ITS_FOR = [
   },
 ];
 
+/** Customer testimonials — social proof shown before pricing. */
+export const TESTIMONIALS = [
+  {
+    headline: "I finally have one clear view of everything.",
+    body: "I had investments in 2 brokerages, property abroad and income in different currencies. NomadWealth brings everything together in one clear number without forcing me into another cloud finance app.",
+    name: "Anthony P.",
+    role: "Remote business owner",
+  },
+  {
+    headline: "It replaced the spreadsheet I was constantly fixing.",
+    body: "I used to track stocks, cash, real estate and private loans across multiple tabs. The app gave me the complete picture while letting me stay in control of my data.",
+    name: "Rachel D.",
+    role: "DIY investor",
+  },
+  {
+    headline: "The privacy-first approach convinced me.",
+    body: "I avoided most net-worth apps because I did not want to share my financial history. Running NomadWealth on my own infrastructure gives me the dashboard I wanted without giving up control.",
+    name: "Andrei A.",
+    role: "Privacy-focused investor",
+  },
+];
+
 export const OWN_DATA = [
   {
     icon: Database,

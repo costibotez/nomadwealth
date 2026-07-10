@@ -1,12 +1,39 @@
 import { Check } from "lucide-react";
 import { Eyebrow } from "@/components/nw/primitives";
-import { OWN_DATA, FEATURES, COMPARE_ROWS, PRICING, WHO_ITS_FOR } from "./content";
+import { OWN_DATA, FEATURES, COMPARE_ROWS, PRICING, WHO_ITS_FOR, TESTIMONIALS } from "./content";
 import { EarlyAccessForm } from "./EarlyAccessForm";
 import {
   type ActiveCampaign,
   discountPriceString,
   withPrefilledPromo,
 } from "@/lib/campaign";
+
+export function TestimonialsSection() {
+  return (
+    <section className="mx-auto max-w-[1080px] px-7 pb-10 pt-20">
+      <Eyebrow>What people say</Eyebrow>
+      <h2 className="mt-3.5 max-w-[24ch] text-[clamp(28px,4vw,42px)] font-bold tracking-[-0.03em] text-text">
+        One clear number — on their own terms.
+      </h2>
+      <div className="mt-11 grid gap-[18px] lg:grid-cols-3">
+        {TESTIMONIALS.map((t) => (
+          <figure key={t.name} className="flex flex-col rounded-card border border-line bg-surface p-6">
+            <blockquote className="flex-1">
+              <p className="text-[16px] font-semibold leading-snug text-text">
+                &ldquo;{t.headline}&rdquo;
+              </p>
+              <p className="mt-3 text-[14px] leading-relaxed text-muted">{t.body}</p>
+            </blockquote>
+            <figcaption className="mt-5 border-t border-line pt-4">
+              <div className="text-[14px] font-medium text-text-2">{t.name}</div>
+              <div className="text-[13px] text-dim">{t.role}</div>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function WhoItsForSection() {
   return (

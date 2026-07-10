@@ -6,6 +6,7 @@ import {
   OwnDataSection,
   FeaturesSection,
   ComparisonSection,
+  TestimonialsSection,
   PricingSection,
   EarlyAccessSection,
 } from "@/components/marketing/Sections";
@@ -53,6 +54,7 @@ export default async function LandingPage() {
         <ComparisonSection />
         <FeaturesSection />
         <OwnDataSection />
+        <TestimonialsSection />
         <PricingSection campaign={campaign} />
         <EarlyAccessSection />
       </main>
