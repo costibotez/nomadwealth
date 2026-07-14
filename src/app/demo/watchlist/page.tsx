@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · Watchlist" };
+
 import { WatchlistClient } from "@/components/watchlist/WatchlistClient";
 import { DEMO_WATCHLIST, DEMO_ALERTS } from "@/lib/demo-fixtures";
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellRing, Mail, Check, ShieldAlert } from "lucide-react";
+import { Bell, BellRing, CalendarClock, Mail, Check, ShieldAlert } from "lucide-react";
 
 interface State {
   vapidPublicKey: string | null;
@@ -9,6 +9,7 @@ interface State {
   ownerEmail: string | null;
   webpush: { enabled: boolean };
   email: { enabled: boolean; address: string };
+  digest: { enabled: boolean };
 }
 
 // VAPID public keys are base64url — convert to the Uint8Array the Push API wants.
@@ -168,6 +169,27 @@ export function NotificationSettings() {
 
   const pushOn = Boolean(state?.webpush.enabled);
   const emailOn = Boolean(state?.email.enabled);
+  const digestOn = Boolean(state?.digest?.enabled);
+
+  async function toggleDigest(enabled: boolean) {
+    setBusy("digest");
+    try {
+      const res = await fetch("/api/notifications", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "digest", enabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        flash("err", data.error ?? "Could not save digest settings.");
+        return;
+      }
+      await load();
+      flash("ok", enabled ? "Weekly digest enabled." : "Weekly digest disabled.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <div className="card max-w-xl p-6">
@@ -281,6 +303,39 @@ export function NotificationSettings() {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Weekly digest ────────────────────────────────────────────────── */}
+      <div className="mt-4 border-t border-border pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CalendarClock size={16} className={digestOn ? "text-accent" : "text-ink-faint"} />
+            <div>
+              <div className="text-sm font-medium text-ink">Weekly digest</div>
+              <div className="text-xs text-ink-faint">
+                A Monday-morning net-worth summary via the channels above.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => toggleDigest(!digestOn)}
+            disabled={busy === "digest" || (!digestOn && !pushOn && !emailOn)}
+            className={
+              "focusring rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 " +
+              (digestOn
+                ? "border border-border bg-panel text-loss hover:bg-hover"
+                : "bg-accent text-black hover:brightness-110")
+            }
+          >
+            {busy === "digest" ? "Saving…" : digestOn ? "Disable" : "Enable"}
+          </button>
+        </div>
+        {!digestOn && !pushOn && !emailOn && (
+          <p className="mt-2 text-xs text-ink-faint">
+            Turn on browser push or email first — the digest needs a delivery
+            channel.
+          </p>
+        )}
       </div>
 
       {msg && (

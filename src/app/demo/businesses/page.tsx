@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · Businesses" };
+
 import { Card, PageGrid, Badge } from "@/components/ui/primitives";
 import { Money, MoneyDelta } from "@/components/ui/money";
 import { formatPct } from "@/lib/format";

@@ -51,6 +51,23 @@ export function OwnerPasswordSettings({ hasOwner }: { hasOwner: boolean }) {
     }
   }
 
+  async function logoutAll() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/logout-all", { method: "POST" });
+      if (!res.ok) {
+        setError("Could not revoke sessions.");
+        return;
+      }
+      // Cookie is cleared server-side; land on the login screen.
+      window.location.href = "/login";
+    } catch {
+      setError("Network error");
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="card max-w-xl p-6">
       <div className="flex items-center gap-3">
@@ -133,6 +150,22 @@ export function OwnerPasswordSettings({ hasOwner }: { hasOwner: boolean }) {
         <p role="alert" className="mt-3 text-sm text-loss">
           {error}
         </p>
+      )}
+
+      {hasOwner && (
+        <div className="mt-6 border-t border-border pt-4">
+          <p className="text-xs text-ink-muted">
+            Signed in somewhere you don&apos;t recognize? Revoke every session on
+            every device — you&apos;ll sign back in with your password.
+          </p>
+          <button
+            onClick={logoutAll}
+            disabled={busy}
+            className="focusring mt-3 rounded-xl border border-border px-4 py-2 text-sm font-medium text-ink transition hover:border-loss hover:text-loss disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Log out all devices
+          </button>
+        </div>
       )}
     </div>
   );

@@ -5,7 +5,7 @@
  * (see lib/migrate-runtime.ts). Regenerate with: pnpm gen:migrations
  */
 /* eslint-disable */
-export const SCHEMA_VERSION = "9999d_notifications";
+export const SCHEMA_VERSION = "9999h_milestones";
 
 export interface EmbeddedMigration {
   tag: string;
@@ -182,6 +182,31 @@ export const MIGRATIONS: EmbeddedMigration[] = [
       "ALTER TABLE \"price_alerts\" ADD COLUMN IF NOT EXISTS \"notified_at\" timestamp with time zone;",
       "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"vapid_public_key\" text;",
       "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"vapid_private_key\" text;"
+    ]
+  },
+  {
+    "tag": "9999e_login_attempts",
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS \"login_attempts\" (\n\t\"id\" serial PRIMARY KEY NOT NULL,\n\t\"key\" text NOT NULL,\n\t\"failures\" integer DEFAULT 0 NOT NULL,\n\t\"last_failure_at\" timestamp with time zone DEFAULT now() NOT NULL,\n\t\"locked_until\" timestamp with time zone\n);",
+      "CREATE UNIQUE INDEX IF NOT EXISTS \"login_attempts_key_key\" ON \"login_attempts\" (\"key\");"
+    ]
+  },
+  {
+    "tag": "9999f_owner_session_version",
+    "statements": [
+      "ALTER TABLE \"owner\" ADD COLUMN IF NOT EXISTS \"session_version\" integer DEFAULT 1 NOT NULL;"
+    ]
+  },
+  {
+    "tag": "9999g_sample_rows",
+    "statements": [
+      "CREATE TABLE IF NOT EXISTS \"sample_rows\" (\n\t\"id\" serial PRIMARY KEY NOT NULL,\n\t\"table_name\" text NOT NULL,\n\t\"row_id\" integer NOT NULL\n);"
+    ]
+  },
+  {
+    "tag": "9999h_milestones",
+    "statements": [
+      "ALTER TABLE \"app_config\" ADD COLUMN IF NOT EXISTS \"last_milestone_eur\" numeric(20, 6);"
     ]
   }
 ];

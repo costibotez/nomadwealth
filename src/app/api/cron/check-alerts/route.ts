@@ -14,6 +14,7 @@ import { db } from "@/db";
 import { priceAlerts } from "@/db/schema";
 import { fetchLivePrices } from "@/lib/prices";
 import { evaluateAndNotify } from "@/lib/notifications/evaluate";
+import { checkMilestones } from "@/lib/notifications/milestones";
 import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -23,10 +24,10 @@ export const maxDuration = 60;
 function authorized(req: Request): boolean {
   const secret = env.CRON_SECRET;
   if (!secret) return false; // fail closed if unset
+  // Header-only: a ?key= fallback would land the secret in access logs and
+  // browser history. Manual trigger: curl -H "Authorization: Bearer $CRON_SECRET".
   const auth = req.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  const key = new URL(req.url).searchParams.get("key"); // manual trigger for testing
-  return key === secret;
+  return auth === `Bearer ${secret}`;
 }
 
 export async function GET(req: Request) {
@@ -57,5 +58,14 @@ export async function GET(req: Request) {
       : [];
 
   const result = await evaluateAndNotify(quotes);
-  return NextResponse.json({ ok: true, symbols: items.length, ...result });
+
+  // Piggyback: celebrate net-worth milestone crossings (once per threshold).
+  let milestone: number | null = null;
+  try {
+    milestone = (await checkMilestones()).celebrated;
+  } catch (err) {
+    console.error("milestone check failed:", err);
+  }
+
+  return NextResponse.json({ ok: true, symbols: items.length, milestone, ...result });
 }

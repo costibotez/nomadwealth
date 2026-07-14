@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · Performance" };
+
 import { ASSET_CLASS_LABELS } from "@/lib/aggregate";
 import { Card, SectionTitle, PageGrid, StatCard } from "@/components/ui/primitives";
 import { MoneyDelta, Pct } from "@/components/ui/money";

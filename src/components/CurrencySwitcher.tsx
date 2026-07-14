@@ -6,7 +6,8 @@ import { CURRENCIES, CURRENCY_META, type Currency } from "@/config/fx";
 import { useCurrency } from "./CurrencyProvider";
 
 export function CurrencySwitcher() {
-  const { currency, setCurrency, asOf, stale, loading, refresh } = useCurrency();
+  const { currency, setCurrency, asOf, stale, loading, source, refresh } = useCurrency();
+  const sample = source === "sample";
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,7 +31,7 @@ export function CurrencySwitcher() {
       >
         <span className="font-medium">{CURRENCY_META[currency].code}</span>
         <span className="hidden text-xs text-ink-faint sm:inline">
-          {stale ? "rates stale" : `FX ${time}`}
+          {stale ? "rates stale" : sample ? "sample rates" : `FX ${time}`}
         </span>
         {stale && (
           <span className="h-1.5 w-1.5 rounded-full bg-loss" title="Using fallback rates" />
@@ -65,7 +66,7 @@ export function CurrencySwitcher() {
             </button>
           ))}
           <div className="border-t border-border px-3 py-2 text-[11px] text-ink-faint">
-            {stale ? "Live FX unavailable — fallback" : `Live, as of ${time}`}
+            {stale ? "Live FX unavailable — fallback" : sample ? "Sample rates for demo" : `Live, as of ${time}`}
           </div>
         </div>
       )}

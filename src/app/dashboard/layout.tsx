@@ -1,5 +1,7 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
+import { hasValidSession } from "@/lib/auth-actions";
 import { Sidebar } from "@/components/Sidebar";
 import { TopBar } from "@/components/TopBar";
 import { TrialBanner } from "@/components/license/TrialBanner";
@@ -13,6 +15,11 @@ export default async function DashboardLayout({
   // Apply any migrations added since this install was set up (the setup wizard
   // can't — it 403s once configured). Cached per instance; no-ops when current.
   await ensureSchemaCurrent();
+
+  // Middleware already checked signature + expiry, but it runs at the edge and
+  // cannot see the owner's session generation. Enforce revocation ("log out
+  // all devices", password/2FA changes) here, where the DB is available.
+  if (!(await hasValidSession())) redirect("/login");
 
   return (
     <CurrencyProvider>

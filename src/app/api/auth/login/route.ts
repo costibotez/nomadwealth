@@ -9,7 +9,13 @@ import {
   signSession,
   timingSafeEqual,
 } from "@/lib/auth";
+import { ensureSchemaCurrent } from "@/lib/ensure-migrated";
 import { getOwner, verifyPassword } from "@/lib/owner";
+import {
+  checkLoginRateLimit,
+  clearLoginFailures,
+  recordLoginFailure,
+} from "@/lib/rate-limit";
 import { verifySecondFactor } from "@/lib/two-factor";
 
 export const runtime = "nodejs";
@@ -37,6 +43,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
+  // Login reads owner columns (session_version) and the login_attempts table
+  // that may postdate this install's setup — make sure the schema is current
+  // before touching either. Cached per instance; no-ops when current.
+  await ensureSchemaCurrent();
+
+  const limit = await checkLoginRateLimit(req);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
   // Auth precedence: the owner row (set in the setup wizard) is authoritative.
   // Fall back to the env DASHBOARD_PASSWORD only when no owner exists, so the
   // original CLI/advanced install path keeps working.
@@ -52,6 +71,7 @@ export async function POST(req: Request) {
   }
 
   if (!ok) {
+    await recordLoginFailure(req);
     // Generic message; do not reveal whether the password was close.
     return NextResponse.json({ error: "Incorrect password" }, { status: 401 });
   }
@@ -67,6 +87,7 @@ export async function POST(req: Request) {
     }
     const factor = await verifySecondFactor(owner, code);
     if (!factor.ok) {
+      await recordLoginFailure(req);
       // Generic message — do not reveal password vs. code specifics.
       return NextResponse.json(
         { error: "Incorrect code", twoFactorRequired: true },
@@ -82,7 +103,8 @@ export async function POST(req: Request) {
     }
   }
 
-  const token = await signSession(secret);
+  await clearLoginFailures(req);
+  const token = await signSession(secret, owner?.sessionVersion ?? 0);
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
   return res;

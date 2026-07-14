@@ -11,22 +11,38 @@ import { STRIPE_SELFHOST_URL } from "@/components/marketing/content";
 export const metadata: Metadata = {
   title: "Live demo",
   description: "Click around NomadWealth with sample data — no signup required.",
+  // All demo tabs canonicalize to /demo on purpose: they are near-duplicates
+  // of one experience, so only /demo should rank. Tabs still set their own
+  // <title> for the browser tab.
   alternates: { canonical: "/demo" },
   robots: { index: true, follow: true },
+  openGraph: {
+    title: "Live demo · NomadWealth",
+    description: "Click around NomadWealth with sample data — no signup required.",
+    url: "/demo",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Live demo · NomadWealth",
+    description: "Click around NomadWealth with sample data — no signup required.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function DemoLayout({ children }: { children: React.ReactNode }) {
   return (
     <ReadonlyProvider value={true}>
-      <CurrencyProvider>
+      <CurrencyProvider demo>
         <div className="flex min-h-screen">
           <DemoSidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-base/80 px-4 pl-16 backdrop-blur lg:px-6 lg:pl-6">
-              <span className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+              {/* h1: demo pages otherwise start their outline at h2 */}
+              <h1 className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
                 <PlayCircle size={15} className="text-accent" />
                 Live demo · sample data, not a real account
-              </span>
+              </h1>
               <div className="flex items-center gap-2">
                 <a
                   href={STRIPE_SELFHOST_URL}

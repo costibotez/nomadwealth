@@ -36,13 +36,25 @@ const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 const STORAGE_KEY = "pid.currency";
 
-export function CurrencyProvider({ children }: { children: React.ReactNode }) {
+export function CurrencyProvider({
+  children,
+  demo = false,
+}: {
+  children: React.ReactNode;
+  /**
+   * Sample-data walkthrough (/demo). Suppresses the "FX rates stale (fallback)"
+   * warning: the figures are fabricated, so a fallback rate is not a data-quality
+   * problem to flag — it just reads as broken on the sales demo. Real shared
+   * portfolios (/share) keep the warning, since stale FX there is meaningful.
+   */
+  demo?: boolean;
+}) {
   const [currency, setCurrencyState] = useState<Currency>("EUR");
   const [rates, setRates] = useState<Record<Currency, number>>(FALLBACK_RATES);
   const [asOf, setAsOf] = useState<Date | null>(null);
-  const [stale, setStale] = useState(true);
+  const [stale, setStale] = useState(!demo);
   const [loading, setLoading] = useState(true);
-  const [source, setSource] = useState("fallback");
+  const [source, setSource] = useState(demo ? "sample" : "fallback");
 
   // Restore preferred currency
   useEffect(() => {
@@ -59,16 +71,17 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       const data = (await res.json()) as FxResponse;
       setRates(data.rates);
       setAsOf(new Date(data.asOf));
-      setStale(data.stale);
-      setSource(data.source);
+      // In demo, a fallback rate is fine sample data — don't flag it as stale.
+      setStale(demo ? false : data.stale);
+      setSource(demo && data.stale ? "sample" : data.source);
     } catch {
       setRates(FALLBACK_RATES);
-      setStale(true);
-      setSource("fallback");
+      setStale(!demo);
+      setSource(demo ? "sample" : "fallback");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [demo]);
 
   useEffect(() => {
     load(false);

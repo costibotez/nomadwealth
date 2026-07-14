@@ -11,14 +11,16 @@ import {
 
 /**
  * Typewriter tail for the benefit-led hero headline. The static part reads
- * "Your entire net worth — not just" and these complete it, cycling through the
- * asset classes NomadWealth tracks that a plain brokerage app can't.
+ * "Your entire net worth — down to" and these complete it, cycling through the
+ * assets a plain brokerage app can't hold. Phrased as positive, complete noun
+ * phrases so any frame — mid-type or paused — reads as a true, benefit-first
+ * statement (never a negative "not just …" partial).
  */
 export const TYPED_WORDS = [
-  "your stocks.",
-  "your property.",
-  "your private loans.",
-  "your business.",
+  "your rental abroad.",
+  "the last private loan.",
+  "the cash in your business.",
+  "every last currency.",
 ];
 
 /**
@@ -95,7 +97,7 @@ export const FEATURES = [
   { tag: "FIRE", title: "Projection you can steer", body: "Forward net-worth model with editable savings, return and target — and read-only share links." },
   { tag: "ONBOARDING", title: "CSV & Excel import", body: "Map columns from any bank or broker export, or add assets by hand. Guided empty states throughout." },
   { tag: "ALERTS", title: "Price alerts that reach you", body: "Track tickers and get price alerts by browser push or email — checked on the server, so they fire even when the app is closed." },
-  { tag: "SETUP", title: "First-run wizard", body: "Auto-migrations, Neon connect and license activation — cockpit live in minutes." },
+  { tag: "SETUP", title: "Live in minutes", body: "A first-run wizard handles migrations, Neon connect and license activation — no config files, no command line." },
 ];
 
 export const COMPARE_ROWS = [
@@ -108,7 +110,7 @@ export const COMPARE_ROWS = [
   { label: "First-class multi-currency", us: "✓", cloud: "~", ghost: "~" },
   { label: "FIRE projection", us: "✓", cloud: "✕", ghost: "✕" },
   { label: "Price alerts (push + email)", us: "✓", cloud: "~", ghost: "~" },
-  { label: "One-time price", us: "✓", cloud: "✕", ghost: "✓" },
+  { label: "Set your own prices", us: "✓", cloud: "✕", ghost: "✓" },
 ];
 
 /**
@@ -126,39 +128,82 @@ export const STRIPE_HOSTED_URL =
   process.env.NEXT_PUBLIC_STRIPE_HOSTED_URL ??
   "https://buy.stripe.com/9B64gzdCD27wbiVf1kgrS0I";
 
-export const PRICING = [
-  {
-    name: "Self-host License",
-    price: "€149",
-    cadence: "one-time",
-    sub: "Includes 1 year of updates",
-    features: ["Full source code", "Deploy-to-Vercel button", "Bring-your-own Neon", "All features unlocked", "Community support"],
-    cta: "Buy license",
-    href: STRIPE_SELFHOST_URL,
-    featured: true,
-  },
-  {
-    name: "License + Updates",
-    price: "€59",
-    cadence: "/yr",
-    sub: "After year one",
-    features: ["Ongoing updates", "New integrations", "Priority issue handling"],
-    cta: "Add renewal",
-    href: STRIPE_RENEW_URL,
-    featured: false,
-  },
-  {
-    name: "Hosted",
-    price: "€12",
-    cadence: "/mo · €120/yr",
-    sub: "We run it for you",
-    features: ["We run it for you", "One-click, zero setup", "Managed backups"],
-    cta: "Get hosted",
-    href: STRIPE_HOSTED_URL,
-    comingSoon: false,
-    featured: false,
-  },
-];
+/**
+ * Two honest choices, no third box: own the software outright, or let us host
+ * it. The old third "renewal" tier was folded into a footnote on the Own card
+ * (see OWN_RENEWAL) — renewal is optional and never gates the running app.
+ * `PRICING` stays an array so StructuredData can still emit an Offer per tier.
+ */
+export const OWN = {
+  name: "Own it",
+  badge: "PAY ONCE",
+  price: "€149",
+  cadence: "one-time · yours forever",
+  sub: "Full source · 1 year of updates included",
+  features: [
+    "Full source code — read every line",
+    "One-click deploy to your own Vercel",
+    "Bring your own Neon Postgres",
+    "Every feature unlocked — no tiers",
+    "1 year of updates included",
+  ],
+  cta: "Buy license — €149",
+  href: STRIPE_SELFHOST_URL,
+  featured: true,
+} as const;
+
+export const HOSTED = {
+  name: "We host it",
+  price: "€15",
+  cadence: "/mo · €150/yr",
+  sub: "We run it — zero setup · two months free on annual",
+  features: [
+    "We run it — zero infrastructure setup",
+    "Managed backups & updates",
+    "Every feature, same product",
+    "Export & self-host any time",
+  ],
+  note: "For people who want the product but not the infra. Same privacy posture — your data stays encrypted and yours.",
+  cta: "Get hosted",
+  footer: "Cancel anytime · export & self-host whenever you want",
+  href: STRIPE_HOSTED_URL,
+  featured: false,
+} as const;
+
+export const PRICING = [OWN, HOSTED];
+
+/**
+ * 4-year cost-of-ownership reframe shown inside the Own card. One consistent
+ * horizon (4 yrs) across the figure and the copy. The cloud comparison is a
+ * sourced, defensible claim — not a bare number.
+ */
+export const OWN_TCO = {
+  headline: "4-year cost of ownership",
+  keep: "You keep €247+",
+  rows: [
+    { label: "NomadWealth", value: "€149 flat", pct: 38 },
+    { label: "Cloud tracker · ~€99/yr", value: "€396 & climbing", pct: 100 },
+  ],
+  note: "Subscriptions bill every year and hold your data. Ownership is a one-time line — the gap only widens.",
+  source: "~€99/yr based on Monarch (~$99/yr); Kubera ~$199/yr; Empower free. Illustrative, in EUR.",
+} as const;
+
+export const OWN_GUARANTEE = {
+  title: "30-day money-back guarantee.",
+  body: "You set it up before you see the value — if it's not for you, one email gets a full refund. No forms.",
+} as const;
+
+/**
+ * Renewal reframed as optional upside, never a tax (see /license). Split into
+ * segments so the lead and the "never disables itself" clause render bold —
+ * matching the emphasis pattern on the pricing card.
+ */
+export const OWN_RENEWAL = {
+  lead: "After year one: keep the updates coming — €39/yr.",
+  body: " New features, integrations, and asset types ship continuously; renewing keeps you on the latest. It's optional and there's no lock-in — the app ",
+  emphasis: "never disables itself",
+  tail: ", and everything you already have keeps working forever. Renew only when a new version is worth it to you.",
+} as const;
 
 /**
  * Deploy-to-Vercel URL. Points at the PUBLIC deploy-template repo (kept in sync
@@ -172,8 +217,8 @@ export const REPO_URL =
 export const DEPLOY_URL =
   `https://vercel.com/new/clone?repository-url=${encodeURIComponent(REPO_URL)}` +
   `&project-name=nomadwealth&repository-name=nomadwealth` +
-  `&env=SESSION_SECRET,DASHBOARD_PASSWORD` +
-  `&envDescription=${encodeURIComponent("SESSION_SECRET signs your login cookie; DASHBOARD_PASSWORD is an optional fallback password.")}` +
+  `&env=SESSION_SECRET,DASHBOARD_PASSWORD,SETUP_TOKEN` +
+  `&envDescription=${encodeURIComponent("SESSION_SECRET signs your login cookie; DASHBOARD_PASSWORD is an optional fallback password; SETUP_TOKEN protects the first-run wizard until you finish it.")}` +
   `&envLink=${encodeURIComponent(REPO_URL + "#environment-variables")}` +
   `&stores=${encodeURIComponent(JSON.stringify([{ type: "integration", integrationSlug: "neon", productSlug: "neon" }]))}`;
 

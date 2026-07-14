@@ -497,6 +497,9 @@ export const appConfig = pgTable("app_config", {
   // only in the buyer's own Neon — nothing is shared with the vendor.
   vapidPublicKey: text("vapid_public_key"),
   vapidPrivateKey: text("vapid_private_key"),
+  // Highest net-worth milestone already celebrated (EUR), so the milestone
+  // check notifies each threshold exactly once. Null until first cron run.
+  lastMilestoneEur: numeric("last_milestone_eur", MONEY),
   ...timestamps,
 });
 
@@ -515,6 +518,10 @@ export const owner = pgTable("owner", {
   totpSecret: text("totp_secret"),
   totpEnabled: boolean("totp_enabled").notNull().default(false),
   backupCodes: jsonb("backup_codes").$type<string[]>(),
+  // Session generation: bumped on password change, 2FA change, or "log out all
+  // devices". Tokens carry the value they were signed with; stale tokens are
+  // rejected by requireSession. See lib/auth.ts.
+  sessionVersion: integer("session_version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -566,6 +573,27 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+});
+
+// Brute-force protection for /api/auth/login. One row per limiter key
+// ("ip:<addr>" or "global"); consecutive failures earn an exponential lockout.
+// Lives only in the buyer's own Neon — no external rate-limit service needed.
+export const loginAttempts = pgTable("login_attempts", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  failures: integer("failures").notNull().default(0),
+  lastFailureAt: timestamp("last_failure_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+});
+
+// Rows inserted by the "Load sample data" onboarding action, so "Clear sample
+// data" can hard-delete exactly what was seeded and nothing else.
+export const sampleRows = pgTable("sample_rows", {
+  id: serial("id").primaryKey(),
+  tableName: text("table_name").notNull(),
+  rowId: integer("row_id").notNull(),
 });
 
 export type AppConfig = typeof appConfig.$inferSelect;

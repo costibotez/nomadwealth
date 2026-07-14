@@ -47,8 +47,9 @@ export async function POST(
       .update(importJobs)
       .set({ status: "failed" })
       .where(eq(importJobs.id, jobId));
+    console.error("import commit failed:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "Import failed — no rows were committed. Check the file and try again." },
       { status: 500 },
     );
   }

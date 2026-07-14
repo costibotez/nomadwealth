@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ShieldCheck, EyeOff, Server, KeyRound, Lock, Bell } from "lucide-react";
 import { PublicHeader } from "@/components/nw/PublicHeader";
 import { Footer } from "@/components/marketing/Footer";
-import { Eyebrow } from "@/components/nw/primitives";
+import { Button, Eyebrow } from "@/components/nw/primitives";
 
 const description =
   "NomadWealth is self-hosted: your financial data lives in your own Neon database on your own Vercel deployment. We literally cannot see it. No analytics on financial values, no error reporting with data payloads.";
@@ -17,6 +18,12 @@ export const metadata: Metadata = {
     description,
     url: "/security",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Security & Privacy · NomadWealth",
+    description,
+    images: ["/og-image.png"],
   },
 };
 
@@ -96,6 +103,28 @@ export default function SecurityPage() {
           </a>
           .
         </p>
+
+        {/* Conversion path — this page draws privacy-driven buyers; don't
+            leave them at a dead end. */}
+        <section className="mt-16 rounded-card border border-line-strong bg-surface p-8 text-center">
+          <h2 className="text-[22px] font-bold tracking-[-0.02em]">
+            Sounds like your kind of privacy?
+          </h2>
+          <p className="mx-auto mt-2 max-w-[48ch] text-[15px] text-muted">
+            Click around the live demo with sample data, or deploy your own
+            cockpit in minutes.
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3.5">
+            <Link href="/demo">
+              <Button size="lg">Try the live demo →</Button>
+            </Link>
+            <Link href="/#pricing">
+              <Button size="lg" variant="secondary">
+                See pricing
+              </Button>
+            </Link>
+          </div>
+        </section>
       </main>
       <Footer />
     </div>

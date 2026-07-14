@@ -29,11 +29,12 @@ export async function GET() {
       enabled: Boolean(byType.email?.enabled),
       address: byType.email?.config?.address ?? owner?.email ?? "",
     },
+    digest: { enabled: Boolean(byType.digest?.enabled) },
   });
 }
 
 const patchSchema = z.object({
-  type: z.enum(["webpush", "email"]),
+  type: z.enum(["webpush", "email", "digest"]),
   enabled: z.boolean().optional(),
   address: z.string().email().optional(),
 });

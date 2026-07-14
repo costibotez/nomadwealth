@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSetupState } from "@/lib/setup-state";
-import { maskDatabaseUrl } from "@/lib/setup-guard";
+import { maskDatabaseUrl, setupTokenRequired } from "@/lib/setup-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,5 +12,9 @@ export async function GET() {
     configured: state.configured,
     hasDatabaseUrl: state.hasDatabaseUrl,
     databaseHint: maskDatabaseUrl(process.env.DATABASE_URL),
+    // Surfaced up-front so the wizard can flag a missing secret in step 0
+    // instead of failing at the very last "finish" click.
+    hasSessionSecret: Boolean(process.env.SESSION_SECRET),
+    setupTokenRequired: setupTokenRequired(),
   });
 }

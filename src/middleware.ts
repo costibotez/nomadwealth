@@ -53,6 +53,26 @@ const MARKETING_PATHS = [
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // CSRF defense-in-depth for the JSON API routes (Server Actions get Next's
+  // built-in Origin check). SameSite=Lax already blocks classic cross-site
+  // POSTs; this keeps us safe if cookie attributes are ever relaxed. Browsers
+  // always send Origin on cross-site fetches; same-origin requests either
+  // match or omit it (curl/scripts), both of which pass.
+  if (req.method !== "GET" && req.method !== "HEAD" && pathname.startsWith("/api/")) {
+    const origin = req.headers.get("origin");
+    if (origin && !pathname.startsWith("/api/webhooks")) {
+      let originHost: string | null = null;
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        /* malformed origin → reject below */
+      }
+      if (originHost !== req.nextUrl.host) {
+        return NextResponse.json({ error: "Cross-origin request rejected" }, { status: 403 });
+      }
+    }
+  }
+
   if (
     MARKETING_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
   ) {
@@ -60,9 +80,11 @@ export async function middleware(req: NextRequest) {
   }
 
   // ---- First-run setup guard ------------------------------------------------
-  // Fast-path: a signed `nw_configured` cookie (set on setup completion) lets
-  // warm requests skip the DB check. Otherwise consult the DB once and, if
-  // configured, stamp the cookie onto the response so future requests are fast.
+  // Fast-path: the `nw_configured` marker cookie (set on setup completion) lets
+  // warm requests skip the DB check. It is a plain, forgeable flag — forging it
+  // only skips this setup-state lookup; the session gate below still runs, so
+  // it grants no data access. Otherwise consult the DB once and, if configured,
+  // stamp the cookie onto the response so future requests are fast.
   const isSetupPath = SETUP_PATHS.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
@@ -83,12 +105,12 @@ export async function middleware(req: NextRequest) {
   // Configured: /setup is done — send stray visits to the dashboard.
   if (pathname === "/setup") {
     const res = NextResponse.redirect(new URL("/dashboard", req.url));
-    if (stampCookie) res.cookies.set("nw_configured", "1", { path: "/" });
+    if (stampCookie) res.cookies.set("nw_configured", "1", { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 365 });
     return res;
   }
 
   const withConfigCookie = (res: NextResponse) => {
-    if (stampCookie) res.cookies.set("nw_configured", "1", { path: "/" });
+    if (stampCookie) res.cookies.set("nw_configured", "1", { path: "/", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 365 });
     return res;
   };
 

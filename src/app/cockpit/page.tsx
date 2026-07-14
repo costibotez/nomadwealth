@@ -21,6 +21,12 @@ export const metadata: Metadata = {
     url: "/cockpit",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "The NomadWealth cockpit",
+    description,
+    images: ["/og-image.png"],
+  },
 };
 
 const num = "mono tabular-nums";

@@ -114,6 +114,44 @@ ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "vapid_public_key" text;
 ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "vapid_private_key" text;`,
 });
 
+// Login brute-force protection (see lib/rate-limit.ts). Idempotent.
+migrations.push({
+  tag: "9999e_login_attempts",
+  sql: `CREATE TABLE IF NOT EXISTS "login_attempts" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"key" text NOT NULL,
+	"failures" integer DEFAULT 0 NOT NULL,
+	"last_failure_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"locked_until" timestamp with time zone
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "login_attempts_key_key" ON "login_attempts" ("key");`,
+});
+
+// Session revocation generation on the owner row (see lib/auth.ts). Idempotent.
+migrations.push({
+  tag: "9999f_owner_session_version",
+  sql: `ALTER TABLE "owner" ADD COLUMN IF NOT EXISTS "session_version" integer DEFAULT 1 NOT NULL;`,
+});
+
+// Bookkeeping for the user-facing "Load sample data" onboarding action, so it
+// can be removed again with one click (see lib/sample-data.ts). Idempotent.
+migrations.push({
+  tag: "9999g_sample_rows",
+  sql: `CREATE TABLE IF NOT EXISTS "sample_rows" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"table_name" text NOT NULL,
+	"row_id" integer NOT NULL
+);`,
+});
+
+// Net-worth milestone bookkeeping for the celebration notifications
+// (see lib/notifications/milestones.ts). Idempotent.
+migrations.push({
+  tag: "9999h_milestones",
+  sql: `ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "last_milestone_eur" numeric(20, 6);`,
+});
+
 // schemaVersion = the last tag, so app_config records exactly what was applied.
 const schemaVersion = migrations[migrations.length - 1].tag;
 

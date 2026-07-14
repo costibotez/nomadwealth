@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · Import" };
+
 import { Upload, Wand2, Eye, Check } from "lucide-react";
 
 const STEPS = [

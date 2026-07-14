@@ -30,7 +30,7 @@ const RANGES = [
  * converts to the active display currency. Until a few days of snapshots have
  * accrued it shows a gentle empty state instead of a flat single dot.
  */
-export function NetWorthTrend({ data }: { data: TrendPoint[] }) {
+export function NetWorthTrend({ data, note }: { data: TrendPoint[]; note?: string }) {
   const { convert, money } = useCurrency();
   const [range, setRange] = useState<(typeof RANGES)[number]["key"]>("All");
 
@@ -49,8 +49,8 @@ export function NetWorthTrend({ data }: { data: TrendPoint[] }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex items-baseline gap-2">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex flex-wrap items-baseline gap-2">
           {filtered.length >= 2 ? (
             <>
               <span className={`tnum text-sm font-semibold ${up ? "text-emerald-400" : "text-red-400"}`}>
@@ -69,7 +69,7 @@ export function NetWorthTrend({ data }: { data: TrendPoint[] }) {
             <span className="text-xs text-muted">Trend builds as daily snapshots accrue</span>
           )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {RANGES.map((r) => (
             <button
               key={r.key}
@@ -125,6 +125,10 @@ export function NetWorthTrend({ data }: { data: TrendPoint[] }) {
         <div className="flex h-72 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted">
           No history yet — your daily price-refresh job records one point per day.
         </div>
+      )}
+
+      {note && filtered.length >= 2 && (
+        <p className="mt-2 text-[11px] leading-relaxed text-muted">{note}</p>
       )}
     </div>
   );

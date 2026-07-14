@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { getTransactions } from "@/db/queries";
+import { requireSession } from "@/lib/auth-actions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Distinct holding symbols that have a live source (stocks + crypto). */
 export async function GET() {
+  // Returns portfolio contents — must not rely on middleware alone for auth.
+  try {
+    await requireSession();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const txns = await getTransactions();
   const seen = new Set<string>();
   const items: { symbol: string; assetClass: string }[] = [];

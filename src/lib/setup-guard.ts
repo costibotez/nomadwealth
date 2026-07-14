@@ -2,6 +2,7 @@
  * Helpers shared by the /api/setup/* and first-run routes.
  */
 import "server-only";
+import { timingSafeEqual } from "@/lib/auth";
 import { getSetupState } from "@/lib/setup-state";
 
 /**
@@ -22,6 +23,26 @@ export function resolveDatabaseUrl(bodyUrl?: string): string | null {
 export async function isUnconfigured(): Promise<boolean> {
   const state = await getSetupState();
   return !state.configured;
+}
+
+/**
+ * Optional first-run provisioning secret. Between deploy and the buyer
+ * finishing the wizard, the setup routes are necessarily unauthenticated —
+ * whoever reaches the URL first could claim the install. Setting SETUP_TOKEN
+ * at deploy time closes that window: every first-run mutation then requires
+ * the token in an `x-setup-token` header. Unset = no gate (setup should be
+ * completed immediately on a URL that hasn't been shared).
+ */
+export function setupTokenRequired(): boolean {
+  return Boolean(process.env.SETUP_TOKEN);
+}
+
+/** True when no token is configured, or the request carries the right one. */
+export function verifySetupToken(req: Request): boolean {
+  const expected = process.env.SETUP_TOKEN;
+  if (!expected) return true;
+  const got = req.headers.get("x-setup-token") ?? "";
+  return timingSafeEqual(got, expected);
 }
 
 /** Mask a connection string for display (keep host, hide credentials). */

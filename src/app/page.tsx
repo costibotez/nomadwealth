@@ -6,8 +6,8 @@ import {
   OwnDataSection,
   FeaturesSection,
   ComparisonSection,
-  TestimonialsSection,
   PricingSection,
+  TestimonialsSection,
   EarlyAccessSection,
 } from "@/components/marketing/Sections";
 import { Footer } from "@/components/marketing/Footer";

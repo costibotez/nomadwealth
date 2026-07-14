@@ -6,6 +6,7 @@
  */
 import "server-only";
 import { renderEmail, escapeHtml } from "./email-template";
+import { DEPLOY_URL } from "@/components/marketing/content";
 
 const enc = new TextEncoder();
 
@@ -116,9 +117,6 @@ export async function sendLicenseEmail(args: {
   const from = process.env.LICENSE_FROM_EMAIL;
   if (!apiKey || !from) return false;
 
-  const deployUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://nomadwealth.app";
-
   const bodyHtml = `
       <p style="margin:0 0 16px 0;">Thanks for buying the <strong>${escapeHtml(
         args.productLabel,
@@ -136,7 +134,7 @@ export async function sendLicenseEmail(args: {
     preheader: "Your NomadWealth license key is inside — activate in the setup wizard.",
     heading: "Your NomadWealth license",
     bodyHtml,
-    cta: { label: "Deploy & activate", url: deployUrl },
+    cta: { label: "Deploy & activate", url: DEPLOY_URL },
     footerNote: args.updatesUntil
       ? `Includes updates until ${escapeHtml(args.updatesUntil)}.`
       : undefined,

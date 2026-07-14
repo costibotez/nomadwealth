@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { setOwner, getOwner } from "@/lib/owner";
-import { isUnconfigured } from "@/lib/setup-guard";
+import { isUnconfigured, verifySetupToken } from "@/lib/setup-guard";
 
 export const runtime = "nodejs";
 
@@ -14,6 +14,9 @@ const schema = z.object({
 export async function POST(req: Request) {
   if (!(await isUnconfigured())) {
     return NextResponse.json({ ok: false, error: "Already configured" }, { status: 403 });
+  }
+  if (!verifySetupToken(req)) {
+    return NextResponse.json({ ok: false, error: "Setup token required" }, { status: 403 });
   }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
@@ -32,8 +35,9 @@ export async function POST(req: Request) {
     await setOwner(parsed.data.password, parsed.data.email || undefined);
     return NextResponse.json({ ok: true });
   } catch (err) {
+    console.error("owner create failed:", err);
     return NextResponse.json(
-      { ok: false, error: err instanceof Error ? err.message : String(err) },
+      { ok: false, error: "Could not save the owner account. Run the database step first." },
       { status: 200 },
     );
   }

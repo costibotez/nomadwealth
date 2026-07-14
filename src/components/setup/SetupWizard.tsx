@@ -28,6 +28,9 @@ export function SetupWizard() {
 
   // Step 1 — Neon
   const [envDbHint, setEnvDbHint] = useState<string | null>(null);
+  const [hasSessionSecret, setHasSessionSecret] = useState(true);
+  const [tokenRequired, setTokenRequired] = useState(false);
+  const [setupToken, setSetupToken] = useState("");
   const [neonStr, setNeonStr] = useState("");
   const [neonTesting, setNeonTesting] = useState(false);
   const [neonConnected, setNeonConnected] = useState(false);
@@ -56,9 +59,27 @@ export function SetupWizard() {
   useEffect(() => {
     fetch("/api/setup/status")
       .then((r) => r.json())
-      .then((d: { databaseHint: string | null }) => setEnvDbHint(d.databaseHint))
+      .then(
+        (d: {
+          databaseHint: string | null;
+          hasSessionSecret?: boolean;
+          setupTokenRequired?: boolean;
+        }) => {
+          setEnvDbHint(d.databaseHint);
+          setHasSessionSecret(d.hasSessionSecret ?? true);
+          setTokenRequired(d.setupTokenRequired ?? false);
+        },
+      )
       .catch(() => {});
   }, []);
+
+  /** Shared headers for every setup API call (includes the deploy token). */
+  function setupHeaders(): Record<string, string> {
+    return {
+      "content-type": "application/json",
+      ...(setupToken ? { "x-setup-token": setupToken } : {}),
+    };
+  }
 
   async function testConnection() {
     setNeonTesting(true);
@@ -68,20 +89,26 @@ export function SetupWizard() {
       const body = envDbHint ? {} : { databaseUrl: neonStr };
       const vr = await fetch("/api/setup/verify-db", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: setupHeaders(),
         body: JSON.stringify(body),
       }).then((r) => r.json());
       if (!vr.connected) {
         setNeonError(vr.error ?? "Could not connect to the database.");
         return;
       }
+      // Distinct phases so a migration failure doesn't read as a bad
+      // connection string.
+      setNeonMsg("Connected — creating tables…");
       const mr = await fetch("/api/setup/migrate", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: setupHeaders(),
         body: JSON.stringify(body),
       }).then((r) => r.json());
       if (!mr.ok) {
-        setNeonError(mr.error ?? "Migrations failed.");
+        setNeonMsg(null);
+        setNeonError(
+          `Connected, but creating the tables failed: ${mr.error ?? "unknown error"}`,
+        );
         return;
       }
       setNeonConnected(true);
@@ -99,20 +126,11 @@ export function SetupWizard() {
     try {
       const res = await fetch("/api/license/activate", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: setupHeaders(),
         body: JSON.stringify({ key: licenseStr }),
       }).then((r) => r.json());
       if (!res.valid) {
         setLicError(res.error ?? "Could not activate this key.");
-        setLicActive(false);
-        return;
-      }
-      // A trial/empty key is not enough to finish setup — a purchased key is
-      // required (the server enforces this too; this is the friendly heads-up).
-      if (res.tier === "trial") {
-        setLicError(
-          "That looks like a trial or empty key. Enter the license key emailed after your purchase to finish setup.",
-        );
         setLicActive(false);
         return;
       }
@@ -131,7 +149,7 @@ export function SetupWizard() {
     try {
       const res = await fetch("/api/owner", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: setupHeaders(),
         body: JSON.stringify({ password, email: email || undefined }),
       }).then((r) => r.json());
       if (!res.ok) {
@@ -164,7 +182,7 @@ export function SetupWizard() {
     try {
       const res = await fetch("/api/setup/complete", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: setupHeaders(),
         body: JSON.stringify({}),
       }).then((r) => r.json());
       if (!res.ok) {
@@ -184,7 +202,9 @@ export function SetupWizard() {
     step === 0
       ? neonConnected
       : step === 1
-        ? licActive && password.length >= 8 && password === confirm
+        ? // License is optional — no key means the free trial tier. The
+          // password is the only hard requirement on this step.
+          password.length >= 8 && password === confirm
         : importMode !== null;
 
   function onContinue() {
@@ -251,6 +271,35 @@ export function SetupWizard() {
               </>
             }
           >
+            {!hasSessionSecret && (
+              <div
+                role="alert"
+                className="mb-4 rounded-md border border-[color:var(--nw-loss)] bg-input px-3.5 py-3 text-[13px] text-[color:var(--nw-loss)]"
+              >
+                SESSION_SECRET is not set in your environment. Add it now (any
+                long random string) and redeploy — setup can&apos;t finish
+                without it.
+              </div>
+            )}
+            {tokenRequired && (
+              <div className="mb-4">
+                <label className="mb-2 block text-[13px] text-muted">
+                  Setup token
+                </label>
+                <TextField
+                  mono
+                  type="password"
+                  value={setupToken}
+                  onChange={(e) => setSetupToken(e.target.value)}
+                  placeholder="The SETUP_TOKEN you set at deploy time"
+                  aria-label="Setup token"
+                />
+                <p className="mt-1 text-[12px] text-dim">
+                  This install requires the SETUP_TOKEN from your deployment
+                  environment before setup can proceed.
+                </p>
+              </div>
+            )}
             <label className="mb-2 block text-[13px] text-muted">
               Postgres connection string
             </label>
@@ -262,13 +311,27 @@ export function SetupWizard() {
                 </p>
               </div>
             ) : (
-              <TextField
-                mono
-                value={neonStr}
-                onChange={(e) => setNeonStr(e.target.value)}
-                placeholder="postgresql://user:****@ep-cool-lab.eu-central-1.aws.neon.tech/neondb"
-                aria-label="Postgres connection string"
-              />
+              <>
+                <TextField
+                  mono
+                  value={neonStr}
+                  onChange={(e) => setNeonStr(e.target.value)}
+                  placeholder="postgresql://user:****@ep-cool-lab.eu-central-1.aws.neon.tech/neondb"
+                  aria-label="Postgres connection string"
+                />
+                <p className="mt-1.5 text-[12px] text-dim">
+                  Find it in your{" "}
+                  <a
+                    href="https://console.neon.tech"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-text"
+                  >
+                    Neon console
+                  </a>{" "}
+                  → your project → “Connect”.
+                </p>
+              </>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button
@@ -292,7 +355,7 @@ export function SetupWizard() {
             icon={<KeyRound size={16} />}
             iconColor="var(--accent)"
             title="Activate your license & set a password"
-            desc="Paste the license key from your purchase email — activation is offline, no phone-home. A valid key is required to finish setup. Then choose the password you'll use to unlock this dashboard."
+            desc="Paste the license key from your purchase email — activation is offline, no phone-home. No key yet? Leave it empty to continue on the free trial and add it later from Settings. Then choose the password you'll use to unlock this dashboard."
           >
             <label className="mb-2 block text-[13px] text-muted">License key</label>
             <TextField
@@ -309,11 +372,27 @@ export function SetupWizard() {
               </Button>
               {licActive && (
                 <span className="text-[14px] text-[color:var(--nw-gain)]">
-                  ✓ Activated · {licTier === "updates" ? "license + updates" : "self-host license"}
+                  ✓ Activated ·{" "}
+                  {licTier === "updates"
+                    ? "license + updates"
+                    : licTier === "trial"
+                      ? "free trial — add your key anytime in Settings"
+                      : "self-host license"}
                 </span>
               )}
             </div>
             {licError && <ErrorLine>{licError}</ErrorLine>}
+            <p className="mt-2 text-[12px] text-dim">
+              Can&apos;t find your key? It was emailed right after purchase
+              (search “NomadWealth license”). Still missing — write to{" "}
+              <a
+                href="mailto:support@nomadwealth.app"
+                className="underline underline-offset-2 hover:text-text"
+              >
+                support@nomadwealth.app
+              </a>
+              .
+            </p>
 
             <div className="mt-6 border-t border-line pt-6">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -404,7 +483,9 @@ export function SetupWizard() {
                   <span className="text-[12px] text-[color:var(--nw-gain)]">parsed ✓</span>
                 </div>
                 <p className="my-3 text-[13px] text-muted">
-                  Map your columns → NomadWealth fields
+                  Map your columns → NomadWealth fields. Nothing has been
+                  uploaded yet — you&apos;ll confirm and commit this import
+                  right after setup finishes.
                 </p>
                 <div className="overflow-hidden rounded-md border border-line">
                   {preview.rows.map((m, i) => (

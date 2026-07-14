@@ -40,6 +40,7 @@ const GEO: Record<string, "Romania" | "US" | "Crypto" | "Global"> = {
 export interface SymbolHolding {
   symbol: string;
   assetClass: string;
+  currency: string; // native price currency (for currency-exposure buckets)
   quantity: number;
   avgCost: number; // native
   investedEur: number;
@@ -102,6 +103,7 @@ export async function getHoldingsModel() {
       daysN = 0;
     let maturityDate: string | null = null;
     let priceEurPerShare = 0;
+    let priceCurrency = "EUR";
     for (const l of buys) {
       buyQty += l.quantity;
       // Commission on a buy is part of what you paid → add to cost basis.
@@ -111,8 +113,9 @@ export async function getHoldingsModel() {
       daysSum += daysBetween(l.tradeDate);
       daysN++;
       if (l.maturityDate) maturityDate = l.maturityDate;
-      // Representative current price (same symbol → same price); last one wins.
+      // Representative current price + its currency (same symbol → same); last wins.
       priceEurPerShare = toEur(l.currentPrice, l.priceCurrency, fx.rates);
+      priceCurrency = l.priceCurrency;
     }
     const avgCostNative = buyQty > 0 ? investedNativeBuys / buyQty : 0;
     const avgCostEur = buyQty > 0 ? investedEurBuys / buyQty : 0;
@@ -146,6 +149,7 @@ export async function getHoldingsModel() {
     symbols.push({
       symbol,
       assetClass,
+      currency: priceCurrency,
       quantity: remainingQty,
       avgCost: avgCostNative,
       investedEur,
@@ -211,7 +215,10 @@ export interface NetWorthModel {
   concentration: {
     largestSymbol: string;
     largestPct: number;
-    romanianPct: number;
+    // Home-market concentration: the share of net worth denominated in your
+    // single largest currency. Auto-detected from the actual per-asset currency
+    // mix — portable to any buyer, with no hardcoded country assumption.
+    homeMarket: { currency: string; pct: number };
     illiquidPct: number;
   };
 }
@@ -307,12 +314,12 @@ export async function getNetWorthModel(): Promise<NetWorthModel> {
   const allocationByGeography = [...geo.entries()].map(([key, valueEur]) => ({ key, valueEur }));
 
   // Currency exposure by native currency
+  const allSymbols = classes.flatMap((c) => c.symbols);
   const cur = new Map<string, number>();
   const addCur = (c: string, v: number) => cur.set(c, (cur.get(c) ?? 0) + v);
-  for (const c of classes) {
-    // investments priced in USD per import
-    addCur("USD", c.currentValueEur);
-  }
+  // Investments bucket by each holding's own price currency (RO stocks in RON,
+  // US stocks in USD, …) rather than assuming a single currency.
+  for (const s of allSymbols) addCur(s.currency, s.currentValueEur);
   for (const a of accounts) addCur(a.currency, toEur(a.balance, a.currency, fx.rates));
   for (const p of properties) addCur(p.currency, toEur(p.value, p.currency, fx.rates));
   for (const b of businessRows) {
@@ -326,17 +333,13 @@ export async function getNetWorthModel(): Promise<NetWorthModel> {
     .sort((a, b) => b.valueEur - a.valueEur);
 
   // Concentration
-  const allSymbols = classes.flatMap((c) => c.symbols);
   const largest = allSymbols.reduce(
     (m, s) => (s.currentValueEur > m.currentValueEur ? s : m),
     { symbol: "—", currentValueEur: 0 } as { symbol: string; currentValueEur: number },
   );
-  const romanianEur =
-    classes
-      .filter((c) => GEO[c.assetClass] === "Romania")
-      .reduce((s, c) => s + c.currentValueEur, 0) +
-    propertiesEur +
-    loansEur;
+  // Home market = the single largest currency bucket (currencyExposure is sorted
+  // desc), so it names whichever currency the buyer is most exposed to.
+  const homeBucket = currencyExposure[0] ?? { currency: "EUR", valueEur: 0 };
   const illiquidEur = propertiesEur + loansEur;
 
   return {
@@ -356,7 +359,10 @@ export async function getNetWorthModel(): Promise<NetWorthModel> {
     concentration: {
       largestSymbol: largest.symbol,
       largestPct: totalNetWorthEur ? largest.currentValueEur / totalNetWorthEur : 0,
-      romanianPct: totalNetWorthEur ? romanianEur / totalNetWorthEur : 0,
+      homeMarket: {
+        currency: homeBucket.currency,
+        pct: totalNetWorthEur ? homeBucket.valueEur / totalNetWorthEur : 0,
+      },
       illiquidPct: totalNetWorthEur ? illiquidEur / totalNetWorthEur : 0,
     },
   };

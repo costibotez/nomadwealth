@@ -33,13 +33,16 @@ export interface LicenseResult {
 }
 
 /**
- * Whether a verified license is enough to FINISH first-run setup. A purchased
- * key (self-host / updates) is required; an empty/invalid/trial key is not.
- * This is the gate that closes the free-deploy loophole — see
- * /api/setup/complete, which re-verifies the signed key and calls this.
+ * Whether a verified license is enough to FINISH first-run setup. Any VALID
+ * result passes — including the trial tier — so a buyer whose purchase email
+ * is delayed or lost is never hard-blocked mid-onboarding (that contradiction
+ * with the "trial unlocks everything" promise was a drop-off point and a
+ * support-ticket generator). The trial install shows a persistent upgrade
+ * banner (see components/license/TrialBanner) instead. Keys with a FORGED or
+ * broken signature still fail: verifyLicenseKey returns valid:false for them.
  */
 export function licenseAllowsSetupCompletion(r: LicenseResult): boolean {
-  return r.valid && r.tier !== "trial";
+  return r.valid;
 }
 
 const enc = new TextEncoder();

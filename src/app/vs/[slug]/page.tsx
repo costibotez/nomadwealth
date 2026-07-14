@@ -76,7 +76,18 @@ export async function generateMetadata({
     description: c.description,
     alternates: { canonical: `/vs/${slug}` },
     robots: { index: true, follow: true },
-    openGraph: { title: `${c.title} · NomadWealth`, description: c.description, url: `/vs/${slug}` },
+    openGraph: {
+      title: `${c.title} · NomadWealth`,
+      description: c.description,
+      url: `/vs/${slug}`,
+      images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${c.title} · NomadWealth`,
+      description: c.description,
+      images: ["/og-image.png"],
+    },
   };
 }
 

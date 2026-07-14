@@ -110,8 +110,7 @@ export function EarlyAccessForm() {
         )}
         {!configured && (
           <p className="mt-2 text-[12px] text-dim">
-            Early access isn&apos;t wired up on this deployment — signing up will open
-            your email client instead.
+            No account needed — this opens a pre-filled email to our team.
           </p>
         )}
       </div>

@@ -49,11 +49,12 @@ export function Wordmark({
         className={cn("nw-logo--dark", common)}
         style={{ height }}
       />
-      {/* light surfaces → dark-text logo */}
+      {/* light surfaces → dark-text logo. Empty alt: only one of the pair is
+          ever visible, so screen readers should announce the name once. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/logo-light.png"
-        alt="NomadWealth"
+        alt=""
         className={cn("nw-logo--light", common)}
         style={{ height }}
       />

@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · FIRE projection" };
+
 import { ProjectionClient } from "@/components/projection/ProjectionClient";
 import { DEMO_NET_WORTH as m } from "@/lib/demo-fixtures";
 

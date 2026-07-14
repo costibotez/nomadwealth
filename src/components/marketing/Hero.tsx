@@ -20,7 +20,7 @@ export function Hero() {
       if (text.length < word.length) {
         t = setTimeout(() => setText(word.slice(0, text.length + 1)), 80);
       } else {
-        t = setTimeout(() => setPhase("pausing"), 1700);
+        t = setTimeout(() => setPhase("pausing"), 2600);
       }
     } else if (phase === "pausing") {
       t = setTimeout(() => setPhase("deleting"), 200);
@@ -64,7 +64,7 @@ export function Hero() {
         </div>
 
         <h1 className="mx-auto max-w-[18ch] text-[clamp(34px,6vw,68px)] font-bold leading-[1.08] tracking-[-0.035em] text-text">
-          Your entire net worth — not just
+          Your entire net worth — down to
           <br />
           <span
             className="inline-block whitespace-nowrap text-brand"
@@ -76,25 +76,29 @@ export function Hero() {
         </h1>
 
         <p className="mx-auto mt-6 max-w-[58ch] text-[clamp(17px,2vw,21px)] leading-[1.55] text-muted">
-          One honest number across everything you own — public holdings, real
-          estate, private loans, business income and FIRE — in the currency you
-          actually think in. Not just the slice your brokerage can see.
+          Public holdings, real estate, private loans and business income —
+          valued in the one currency you actually think in. Not just the slice
+          your brokerage can see.
         </p>
 
         <div className="mt-10 flex flex-wrap justify-center gap-3.5">
-          <a href="#early-access">
-            <Button size="lg">Get early access</Button>
-          </a>
           <Link href="/demo">
-            <Button size="lg" variant="secondary">
-              Try the live demo →
-            </Button>
+            <Button size="lg">Try the live demo →</Button>
           </Link>
+          <a href="#pricing">
+            <Button size="lg" variant="secondary">
+              Own it — €149 once
+            </Button>
+          </a>
         </div>
 
         <p className="mt-4 text-[13px] text-dim">
-          Pre-launch — join the list, no card required.{" "}
-          <span className="text-muted">30-day money-back guarantee at launch.</span>
+          No signup for the demo.{" "}
+          <span className="text-muted">30-day money-back guarantee.</span>{" "}
+          <a href="#early-access" className="underline-offset-2 hover:text-brand hover:underline">
+            Or join the mailing list
+          </a>
+          .
         </p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-6 text-[13px] text-dim">

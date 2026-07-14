@@ -5,10 +5,10 @@
 NomadWealth is a product you self-host, not a SaaS you log into. Buyers deploy it to their own Vercel account and connect their own Neon Postgres via a one-click setup wizard; financial data never reaches the vendor. Sold as a one-time self-host license with optional yearly updates, plus an optional managed-hosting plan.
 
 ## Product
-- [Overview & pricing](https://www.nomadwealth.app/): what it is, features, plans
-- [Live demo](https://www.nomadwealth.app/demo): click through the cockpit with sample data, no signup
-- [Cockpit tour](https://www.nomadwealth.app/cockpit): the dashboard surfaces
-- [Security & privacy](https://www.nomadwealth.app/security): the no-vendor-data model, offline license activation
+- [Overview & pricing](https://nomadwealth.app/): what it is, features, plans
+- [Live demo](https://nomadwealth.app/demo): click through the cockpit with sample data, no signup
+- [Cockpit tour](https://nomadwealth.app/cockpit): the dashboard surfaces
+- [Security & privacy](https://nomadwealth.app/security): the no-vendor-data model, offline license activation
 
 ## Key facts
 - Self-hosted on your own Vercel + Neon Postgres; runs with only DATABASE_URL + SESSION_SECRET.
@@ -19,4 +19,4 @@ NomadWealth is a product you self-host, not a SaaS you log into. Buyers deploy i
 - Pricing: one-time self-host license (~€149) with 1 year of updates, ~€59/yr optional renewal, ~€12/mo optional managed hosting.
 
 ## Contact
-- [Feedback & support](https://www.nomadwealth.app/feedback)
+- [Feedback & support](https://nomadwealth.app/feedback)

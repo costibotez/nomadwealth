@@ -11,10 +11,33 @@ export const metadata: Metadata = {
   description,
   alternates: { canonical: "/changelog" },
   robots: { index: true, follow: true },
-  openGraph: { title: "Changelog · NomadWealth", description, url: "/changelog" },
+  openGraph: {
+    title: "Changelog · NomadWealth",
+    description,
+    url: "/changelog",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Changelog · NomadWealth",
+    description,
+    images: ["/og-image.png"],
+  },
 };
 
 const RELEASES: { date: string; version: string; items: string[] }[] = [
+  {
+    date: "2026-07-12",
+    version: "1.6",
+    items: [
+      "Your net-worth headline now shows a true change over the past 30 days — the whole balance sheet moving, not just your holdings' unrealized P/L.",
+      "Home-market concentration now names your dominant currency (e.g. “In RON assets”) and works from any country — no more hardcoded assumptions.",
+      "More accurate currency exposure: each holding is counted in the currency it actually trades in.",
+      "The net-worth trend now shows property value rising gradually between purchase and today, instead of a flat step at its current value.",
+      "Homepage refresh — a clearer, benefit-led hero and tightened messaging throughout.",
+      "Live demo polish: fixed a stray error and clearer sample-rate labeling.",
+    ],
+  },
   {
     date: "2026-07-10",
     version: "1.5",

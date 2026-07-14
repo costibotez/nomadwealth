@@ -150,13 +150,14 @@ export const DEMO_NET_WORTH = {
     { key: "Global", valueEur: 24200 },
   ],
   currencyExposure: [
-    { currency: "EUR", valueEur: 225500 },
-    { currency: "USD", valueEur: 88600 },
+    { currency: "RON", valueEur: 241100 },
+    { currency: "USD", valueEur: 48800 },
+    { currency: "EUR", valueEur: 24200 },
   ],
   concentration: {
     largestSymbol: "BTC-USD",
     largestPct: 0.078,
-    romanianPct: 0.7676,
+    homeMarket: { currency: "RON", pct: 0.7676 },
     illiquidPct: 0.6590,
   },
 };

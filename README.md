@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/logo-dark.png">
+  <img alt="NomadWealth" src="public/logo-light.png" width="440">
+</picture>
+
 # NomadWealth
 
 **Your entire net worth — not just your stocks.**
@@ -10,7 +15,7 @@ with a FIRE projection — on **your own** Vercel and **your own** Neon Postgres
 
 We literally can't see your data. It never leaves your infrastructure.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcostibotez%2Fnomadwealth&project-name=nomadwealth&repository-name=nomadwealth&env=SESSION_SECRET%2CDASHBOARD_PASSWORD&envDescription=SESSION_SECRET%20signs%20your%20login%20cookie%3B%20DASHBOARD_PASSWORD%20is%20an%20optional%20fallback.&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%7D%5D)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcostibotez%2Fnomadwealth&project-name=nomadwealth&repository-name=nomadwealth&env=SESSION_SECRET%2CSETUP_TOKEN&envDescription=SESSION_SECRET%20signs%20your%20login%20cookie%3B%20SETUP_TOKEN%20protects%20the%20first-run%20wizard%20until%20you%20finish%20it.&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22neon%22%2C%22productSlug%22%3A%22neon%22%7D%5D)
 
 [Live demo](https://www.nomadwealth.app/demo) · [Website](https://www.nomadwealth.app) · [Security & privacy](https://www.nomadwealth.app/security)
 
@@ -46,10 +51,10 @@ See [`SECURITY.md`](./SECURITY.md) and the public [security page](https://www.no
 
 1. Click **Deploy with Vercel** above.
 2. Vercel clones this repo into **your** account and provisions **your** Neon Postgres (via the Neon integration).
-3. Add the two required env vars when prompted: `SESSION_SECRET` (a long random string) and, optionally, `DASHBOARD_PASSWORD`.
+3. Set the env vars when prompted: `SESSION_SECRET` (a long random string — `openssl rand -base64 48`) and, recommended, `SETUP_TOKEN` (any random string that locks the first-run wizard to you until you finish it).
 4. Open your new deployment — the **first-run setup wizard** takes over:
    - **1 · Neon** — confirm the connection; the schema migrates automatically into your DB.
-   - **2 · License** — paste the license key emailed after purchase (verified offline) and set your owner password.
+   - **2 · License & password** — paste the license key emailed after purchase (verified offline, on your instance) and set the owner password you'll log in with.
    - **3 · Import** — upload a CSV/Excel export or start entering assets by hand.
 
 That's it — your cockpit is live, on your own infrastructure.
@@ -72,7 +77,8 @@ Only two are required to run:
 | --- | :---: | --- |
 | `DATABASE_URL` | ✅ | Your Neon Postgres connection string (auto-provisioned by the Vercel + Neon integration). |
 | `SESSION_SECRET` | ✅ | Signs your login session cookie. Generate with `openssl rand -base64 48`. |
-| `DASHBOARD_PASSWORD` | — | Optional fallback password (the owner password set in the wizard takes precedence). |
+| `SETUP_TOKEN` | — | Recommended: locks the first-run wizard to you until setup is finished. Unset = no gate. |
+| `DASHBOARD_PASSWORD` | — | Optional fallback password for the advanced/CLI path; not prompted at deploy. The owner password set in the wizard takes precedence. |
 | `CMC_API_KEY` | — | Your own CoinMarketCap key for live crypto prices (stocks use keyless Yahoo Finance). |
 
 Everything else in [`.env.example`](./.env.example) is optional and documented inline.

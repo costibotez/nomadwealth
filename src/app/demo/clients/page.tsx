@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Demo · Clients" };
+
 import { ClientsClient } from "@/components/clients/ClientsClient";
 import { DEMO_CLIENTS } from "@/lib/demo-fixtures";
 

@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { license, appConfig } from "@/db/schema";
 import { sql } from "drizzle-orm";
 import { verifyLicenseKey, remoteKeyCheck } from "@/lib/license";
-import { isUnconfigured } from "@/lib/setup-guard";
+import { isUnconfigured, verifySetupToken } from "@/lib/setup-guard";
 import { pingActivation } from "@/lib/activation-ping";
 
 export const runtime = "nodejs";
@@ -16,7 +16,14 @@ const schema = z.object({ key: z.string().max(4096) });
  * ever leaves the install. The activation state is stored in the buyer's DB.
  */
 export async function POST(req: Request) {
-  // Allowed during first-run setup; also usable later to upgrade a trial.
+  // Allowed during first-run setup; also usable later to upgrade a trial
+  // (post-setup, middleware requires an owner session for this path).
+  if ((await isUnconfigured()) && !verifySetupToken(req)) {
+    return NextResponse.json(
+      { valid: false, error: "Setup token required" },
+      { status: 403 },
+    );
+  }
   const parsed = schema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json({ valid: false, error: "Key required" }, { status: 400 });
@@ -54,13 +61,13 @@ export async function POST(req: Request) {
         },
       });
   } catch (err) {
+    console.error("license activation save failed:", err);
     return NextResponse.json(
       {
         valid: false,
         tier: result.tier,
         error:
           "Verified, but could not save activation — run the database step first.",
-        detail: err instanceof Error ? err.message : String(err),
       },
       { status: 200 },
     );

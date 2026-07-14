@@ -1,6 +1,5 @@
 import { PRICING } from "./content";
-
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nomadwealth.app").replace(/\/+$/, "");
+import { SITE_URL as SITE } from "@/lib/site";
 
 /**
  * JSON-LD structured data (schema.org SoftwareApplication + Offers) for the
@@ -19,15 +18,33 @@ export function StructuredData() {
 
   const json = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "NomadWealth",
-    applicationCategory: "FinanceApplication",
-    operatingSystem: "Web (self-hosted on Vercel + Neon)",
-    url: SITE,
-    description:
-      "Self-hostable personal net-worth & investment cockpit — multi-currency, multi-asset (public holdings, real estate, private loans, business income, cash, crypto) with a FIRE projection. Your data stays on your own Vercel and Neon Postgres; the vendor cannot see it.",
-    offers,
-    publisher: { "@type": "Organization", name: "NomadWealth", url: SITE },
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        name: "NomadWealth",
+        applicationCategory: "FinanceApplication",
+        operatingSystem: "Web (self-hosted on Vercel + Neon)",
+        url: SITE,
+        description:
+          "Self-hostable personal net-worth & investment cockpit — multi-currency, multi-asset (public holdings, real estate, private loans, business income, cash, crypto) with a FIRE projection. Your data stays on your own Vercel and Neon Postgres; the vendor cannot see it.",
+        offers,
+        publisher: { "@id": `${SITE}/#organization` },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${SITE}/#organization`,
+        name: "NomadWealth",
+        url: SITE,
+        logo: `${SITE}/icon.png`,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE}/#website`,
+        name: "NomadWealth",
+        url: SITE,
+        publisher: { "@id": `${SITE}/#organization` },
+      },
+    ],
   };
 
   return (

@@ -6,6 +6,7 @@ import { NetWorthTrend } from "@/components/charts/NetWorthTrend";
 import { ExposureBar } from "@/components/charts/ExposureBar";
 import { GEO_COLORS, CURRENCY_COLORS, PALETTE } from "@/components/charts/palette";
 import { AccountsManager } from "@/components/accounts/AccountsManager";
+import { netWorthChange } from "@/lib/networth-change";
 import {
   DEMO_NET_WORTH as m,
   DEMO_NET_WORTH_HISTORY,
@@ -15,6 +16,7 @@ import {
 // Mirrors src/app/dashboard/page.tsx, but reads only from static demo fixtures.
 export default function DemoOverviewPage() {
   const trend = DEMO_NET_WORTH_HISTORY;
+  const change = netWorthChange(trend, m.totalNetWorthEur);
 
   const classSlices = m.allocationByClass.map((a, i) => ({
     name: a.label,
@@ -37,7 +39,7 @@ export default function DemoOverviewPage() {
     { id: "current_value", label: "Current value", type: "money", eur: m.totalCurrentValueEur },
     { id: "unrealized_pl", label: "Unrealized P/L", type: "moneyDelta", eur: m.unrealizedPlEur, pct: m.unrealizedPct },
     { id: "realized_pl_ytd", label: "Realized P/L (YTD)", type: "moneyDelta", eur: m.realizedPlYtdEur },
-    { id: "romanian", label: "In Romanian assets", type: "pct", pct: m.concentration.romanianPct },
+    { id: "romanian", label: `In ${m.concentration.homeMarket.currency} assets`, type: "pct", pct: m.concentration.homeMarket.pct },
     { id: "illiquid", label: "Illiquid (property + loans)", type: "pct", pct: m.concentration.illiquidPct },
     { id: "real_estate", label: "Real estate", type: "moneyCompact", eur: m.components.propertiesEur },
     { id: "cash", label: "Cash", type: "moneyCompact", eur: m.components.accountsEur },
@@ -53,8 +55,7 @@ export default function DemoOverviewPage() {
         totalEur={m.totalNetWorthEur}
         personalEur={m.personalNetWorthEur}
         companyEur={m.companyCashEur}
-        changeEur={m.unrealizedPlEur}
-        changePct={m.unrealizedPct}
+        change={change}
       />
 
       <StatTiles catalog={tileCatalog} defaultIds={defaultTileIds} />
@@ -98,10 +99,10 @@ export default function DemoOverviewPage() {
             tone={flag(m.concentration.largestPct, 0.15, 0.25)}
           />
           <FlagStat
-            label="Romanian assets"
-            value="Concentration"
-            pct={m.concentration.romanianPct}
-            tone={flag(m.concentration.romanianPct, 0.5, 0.7)}
+            label="Home market"
+            value={`${m.concentration.homeMarket.currency} assets`}
+            pct={m.concentration.homeMarket.pct}
+            tone={flag(m.concentration.homeMarket.pct, 0.5, 0.7)}
           />
           <FlagStat
             label="Illiquid"

@@ -3,8 +3,9 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { owner } from "@/db/schema";
-import { getOwner, verifyPassword } from "@/lib/owner";
+import { bumpSessionVersion, getOwner, verifyPassword } from "@/lib/owner";
 import { requireSession } from "@/lib/auth-actions";
+import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/auth";
 import { verifySecondFactor } from "@/lib/two-factor";
 
 export const runtime = "nodejs";
@@ -53,5 +54,16 @@ export async function POST(req: Request) {
     .set({ totpSecret: null, totpEnabled: false, backupCodes: null })
     .where(eq(owner.id, row.id));
 
-  return NextResponse.json({ ok: true });
+  // Revoke sessions issued while 2FA was on; keep this device signed in.
+  const ver = await bumpSessionVersion();
+  const res = NextResponse.json({ ok: true });
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (sessionSecret) {
+    res.cookies.set(
+      SESSION_COOKIE,
+      await signSession(sessionSecret, ver),
+      sessionCookieOptions,
+    );
+  }
+  return res;
 }

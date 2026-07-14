@@ -4,25 +4,24 @@ import { ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import { useCurrency } from "@/components/CurrencyProvider";
 import { AnimatedMoney, Money } from "@/components/ui/money";
 import { formatPct, deltaClass } from "@/lib/format";
+import type { NetWorthChange } from "@/lib/networth-change";
 
 export function HeroNetWorth({
   totalEur,
   personalEur,
   companyEur,
-  changeEur,
-  changePct,
+  change,
 }: {
   totalEur: number;
   personalEur: number;
   companyEur: number;
-  changeEur: number;
-  changePct: number | null;
+  /** Net-worth change over a period, or null when there's no history yet. */
+  change: NetWorthChange | null;
 }) {
   const { asOf, stale, source } = useCurrency();
   const time = asOf
     ? asOf.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : "—";
-  const up = changeEur >= 0;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-raised p-6 sm:p-8">
@@ -37,14 +36,20 @@ export function HeroNetWorth({
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <span className={`inline-flex items-center gap-1 ${deltaClass(changeEur)}`}>
-            {up ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-            <Money eur={changeEur} signed className="font-medium" />
-            {changePct != null && <span className="tnum">({formatPct(changePct, { signed: true })})</span>}
-            <span className="text-ink-faint">since cost</span>
-          </span>
+          {change && (
+            <span className={`inline-flex items-center gap-1 ${deltaClass(change.eur)}`}>
+              {change.eur >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+              <Money eur={change.eur} signed className="font-medium" />
+              {change.pct != null && <span className="tnum">({formatPct(change.pct, { signed: true })})</span>}
+              <span className="text-ink-faint">{change.label}</span>
+            </span>
+          )}
           <span className="text-ink-faint">
-            {stale ? "FX rates stale (fallback)" : `FX live · as of ${time} · ${source}`}
+            {stale
+              ? "FX rates stale (fallback)"
+              : source === "sample"
+                ? "Sample FX rates"
+                : `FX live · as of ${time} · ${source}`}
           </span>
         </div>
 

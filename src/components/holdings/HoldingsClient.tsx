@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { ChevronRight, Plus, Pencil, Trash2, Tag, CalendarClock } from "lucide-react";
 import { Money, MoneyDelta, Pct } from "@/components/ui/money";
 import { Card, EmptyState, Badge } from "@/components/ui/primitives";
@@ -113,9 +113,8 @@ export function HoldingsClient({ classes }: { classes: ClassHolding[] }) {
                 const open = expanded === key;
                 const pctClass = active.currentValueEur ? s.currentValueEur / active.currentValueEur : 0;
                 return (
-                  <>
+                  <Fragment key={key}>
                     <tr
-                      key={key}
                       className="cursor-pointer border-b border-border/60 hover:bg-hover/50"
                       onClick={() => setExpanded(open ? null : key)}
                     >
@@ -169,7 +168,7 @@ export function HoldingsClient({ classes }: { classes: ClassHolding[] }) {
                           </td>
                         </tr>
                       ))}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>

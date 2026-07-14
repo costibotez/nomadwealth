@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getOwner, verifyPassword, setOwnerPassword } from "@/lib/owner";
+import {
+  bumpSessionVersion,
+  getOwner,
+  setOwnerPassword,
+  verifyPassword,
+} from "@/lib/owner";
 import { requireSession } from "@/lib/auth-actions";
-import { timingSafeEqual } from "@/lib/auth";
+import {
+  SESSION_COOKIE,
+  sessionCookieOptions,
+  signSession,
+  timingSafeEqual,
+} from "@/lib/auth";
 
 export const runtime = "nodejs";
 
@@ -48,5 +58,14 @@ export async function POST(req: Request) {
   }
 
   const { created } = await setOwnerPassword(newPassword);
-  return NextResponse.json({ ok: true, ownerCreated: created });
+
+  // Revoke every outstanding session token; keep THIS device signed in by
+  // issuing a fresh cookie carrying the new generation.
+  const ver = await bumpSessionVersion();
+  const res = NextResponse.json({ ok: true, ownerCreated: created });
+  const secret = process.env.SESSION_SECRET;
+  if (secret) {
+    res.cookies.set(SESSION_COOKIE, await signSession(secret, ver), sessionCookieOptions);
+  }
+  return res;
 }

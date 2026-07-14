@@ -63,11 +63,19 @@ export function timingSafeEqual(a: string, b: string): boolean {
 
 export interface SessionPayload {
   exp: number; // unix seconds
+  /**
+   * Session generation, mirroring owner.session_version (0 = env-password
+   * fallback / legacy token). Bumping the column invalidates every issued
+   * token at the Node layer — see `requireSession` in lib/auth-actions.ts.
+   * Edge middleware only checks signature + expiry (no DB at the edge).
+   */
+  ver?: number;
 }
 
-export async function signSession(secret: string): Promise<string> {
+export async function signSession(secret: string, ver = 0): Promise<string> {
   const payload: SessionPayload = {
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    ver,
   };
   const body = base64url(enc.encode(JSON.stringify(payload)));
   const sig = await hmac(secret, body);
@@ -77,6 +85,8 @@ export async function signSession(secret: string): Promise<string> {
 export async function verifySession(
   token: string | undefined,
   secret: string,
+  /** When provided, the token's `ver` claim must match (missing claim = 0). */
+  expectedVer?: number,
 ): Promise<SessionPayload | null> {
   if (!token) return null;
   const dot = token.lastIndexOf(".");
@@ -90,6 +100,9 @@ export async function verifySession(
     const payload = JSON.parse(json) as SessionPayload;
     if (typeof payload.exp !== "number") return null;
     if (payload.exp < Math.floor(Date.now() / 1000)) return null;
+    if (expectedVer !== undefined && (payload.ver ?? 0) !== expectedVer) {
+      return null;
+    }
     return payload;
   } catch {
     return null;

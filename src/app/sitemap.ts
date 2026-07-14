@@ -1,13 +1,12 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL as base } from "@/lib/site";
 
-// Strip any trailing slash so `${base}/path` never doubles up (//).
-const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://nomadwealth.app").replace(/\/+$/, "");
-
+// Only canonical 200 URLs belong here — /welcome is a 308 redirect to /, so
+// it is deliberately absent (Search Console flags redirecting sitemap URLs).
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   return [
     { url: `${base}/`, lastModified: now, changeFrequency: "weekly", priority: 1 },
-    { url: `${base}/welcome`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/cockpit`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/demo`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/security`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },

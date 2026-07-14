@@ -3,8 +3,9 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { owner } from "@/db/schema";
-import { getOwner } from "@/lib/owner";
+import { bumpSessionVersion, getOwner } from "@/lib/owner";
 import { requireSession } from "@/lib/auth-actions";
+import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/auth";
 import { verifyTOTP } from "@/lib/totp";
 import { generateBackupCodes, hashBackupCodes } from "@/lib/two-factor";
 
@@ -56,6 +57,17 @@ export async function POST(req: Request) {
     .set({ totpEnabled: true, backupCodes: hashed })
     .where(eq(owner.id, row.id));
 
+  // Revoke sessions issued before 2FA was on; keep this device signed in.
+  const ver = await bumpSessionVersion();
   // Plaintext codes are returned exactly once — never stored, never logged.
-  return NextResponse.json({ ok: true, backupCodes });
+  const res = NextResponse.json({ ok: true, backupCodes });
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (sessionSecret) {
+    res.cookies.set(
+      SESSION_COOKIE,
+      await signSession(sessionSecret, ver),
+      sessionCookieOptions,
+    );
+  }
+  return res;
 }

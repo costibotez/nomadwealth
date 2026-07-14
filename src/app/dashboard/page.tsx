@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
 import { getNetWorthModel } from "@/lib/aggregate";
+import { netWorthChange } from "@/lib/networth-change";
 import { getAccounts, getNetWorthHistory } from "@/db/queries";
 import { getFxRates, toEur } from "@/lib/fx-server";
 import { getLicenseStatus } from "@/lib/license-status";
+import { hasSampleData } from "@/lib/sample-data";
 import { AccountsManager } from "@/components/accounts/AccountsManager";
+import { GettingStarted, SampleDataBanner } from "@/components/onboarding/GettingStarted";
 import { HeroNetWorth } from "@/components/HeroNetWorth";
 import { LivePricesBar } from "@/components/LivePricesBar";
 import { Card, SectionTitle, PageGrid, Badge } from "@/components/ui/primitives";
@@ -24,14 +27,17 @@ const LICENSE_TIER_LABEL: Record<string, string> = {
 };
 
 export default async function OverviewPage() {
-  const [m, accountsRaw, fx, history, licenseStatus] = await Promise.all([
-    getNetWorthModel(),
-    getAccounts(),
-    getFxRates(),
-    getNetWorthHistory(),
-    getLicenseStatus(),
-  ]);
+  const [m, accountsRaw, fx, history, licenseStatus, sampleDataPresent] =
+    await Promise.all([
+      getNetWorthModel(),
+      getAccounts(),
+      getFxRates(),
+      getNetWorthHistory(),
+      getLicenseStatus(),
+      hasSampleData().catch(() => false),
+    ]);
   const trend = history.map((h) => ({ date: h.snapshotDate, totalEur: h.totalEur }));
+  const change = netWorthChange(trend, m.totalNetWorthEur);
   const accounts = accountsRaw.map((a) => ({
     id: a.id,
     name: a.name,
@@ -65,7 +71,7 @@ export default async function OverviewPage() {
     { id: "current_value", label: "Current value", type: "money", eur: m.totalCurrentValueEur },
     { id: "unrealized_pl", label: "Unrealized P/L", type: "moneyDelta", eur: m.unrealizedPlEur, pct: m.unrealizedPct },
     { id: "realized_pl_ytd", label: "Realized P/L (YTD)", type: "moneyDelta", eur: m.realizedPlYtdEur },
-    { id: "romanian", label: "In Romanian assets", type: "pct", pct: m.concentration.romanianPct },
+    { id: "romanian", label: `In ${m.concentration.homeMarket.currency} assets`, type: "pct", pct: m.concentration.homeMarket.pct },
     { id: "illiquid", label: "Illiquid (property + loans)", type: "pct", pct: m.concentration.illiquidPct },
     { id: "real_estate", label: "Real estate", type: "moneyCompact", eur: m.components.propertiesEur },
     { id: "businesses", label: "Businesses", type: "moneyCompact", eur: m.components.businessesEur },
@@ -97,6 +103,30 @@ export default async function OverviewPage() {
 
   const trial = licenseStatus.tier === "trial" || licenseStatus.tier === "none";
 
+  // First run: nothing anywhere yet → guide to the first import instead of
+  // rendering a wall of empty €0 charts.
+  const firstRun =
+    accountsRaw.length === 0 &&
+    m.allocationByClass.length === 0 &&
+    m.totalNetWorthEur === 0 &&
+    trend.length === 0;
+
+  if (firstRun) {
+    return (
+      <PageGrid>
+        <div className="flex justify-end">
+          <Link href="/dashboard/license" className="focusring rounded-md">
+            <Badge tone={trial ? "amber" : "gain"}>
+              <KeyRound size={12} className="mr-1" />
+              {LICENSE_TIER_LABEL[licenseStatus.tier]}
+            </Badge>
+          </Link>
+        </div>
+        <GettingStarted />
+      </PageGrid>
+    );
+  }
+
   return (
     <PageGrid>
       <div className="flex justify-end">
@@ -107,13 +137,13 @@ export default async function OverviewPage() {
           </Badge>
         </Link>
       </div>
+      {sampleDataPresent && <SampleDataBanner />}
       <LivePricesBar />
       <HeroNetWorth
         totalEur={m.totalNetWorthEur}
         personalEur={m.personalNetWorthEur}
         companyEur={m.companyCashEur}
-        changeEur={m.unrealizedPlEur}
-        changePct={m.unrealizedPct}
+        change={change}
       />
 
       {/* KPI row — customizable (reorder + swap which metrics show) */}
@@ -122,7 +152,10 @@ export default async function OverviewPage() {
       {/* Net worth over time */}
       <Card>
         <SectionTitle>Net worth over time</SectionTitle>
-        <NetWorthTrend data={trend} />
+        <NetWorthTrend
+          data={trend}
+          note="Past points value holdings at cost basis and interpolate property value between its purchase price and today; the latest point uses live market prices."
+        />
       </Card>
 
       {/* Allocations */}
@@ -163,10 +196,10 @@ export default async function OverviewPage() {
             tone={flag(m.concentration.largestPct, 0.15, 0.25)}
           />
           <FlagStat
-            label="Romanian assets"
-            value="Concentration"
-            pct={m.concentration.romanianPct}
-            tone={flag(m.concentration.romanianPct, 0.5, 0.7)}
+            label="Home market"
+            value={`${m.concentration.homeMarket.currency} assets`}
+            pct={m.concentration.homeMarket.pct}
+            tone={flag(m.concentration.homeMarket.pct, 0.5, 0.7)}
           />
           <FlagStat
             label="Illiquid"

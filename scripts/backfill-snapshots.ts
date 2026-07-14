@@ -37,6 +37,7 @@ config();
 
 import { db, schema } from "./db";
 import { loanState, interestToDate, type Compounding } from "../src/lib/finance";
+import { propertyValueAt } from "../src/lib/property-history";
 import { FALLBACK_RATES, CURRENCIES, type Currency } from "../src/config/fx";
 
 const DRY = process.argv.includes("--dry");
@@ -173,14 +174,13 @@ async function main() {
     return v;
   }
 
-  // Each property contributes its CURRENT value (held flat) for every day from
-  // when it was acquired until it was sold — consistent with how the live net-
-  // worth model values property (at `value`, not at historical/ledger cost) and
-  // with how cash is held flat here. The acquisition date is the earliest known
-  // of: purchaseDate, the property's first dated ledger entry, else the series
-  // start. This is what reconciles the chart's latest point with the headline
-  // net worth — the previous version valued ledgered properties at dated cost
-  // and dropped undated ledger rows, so real estate fell out of the curve.
+  // Each property's value is interpolated linearly from purchasePrice@purchaseDate
+  // up to its current `value` today (see lib/property-history) — so the curve
+  // shows appreciation accruing over time instead of a flat step, while still
+  // landing exactly on `value` today to match the live net-worth model. Falls
+  // back to flat `value` when there's no purchase basis. The acquisition date
+  // (for the "not yet owned" filter) is the earliest known of: purchaseDate, the
+  // property's first dated ledger entry, else the series start.
   const firstLedgerDate = (propertyId: number): string | null => {
     const dates = propLedger
       .filter((e) => e.propertyId === propertyId && e.occurredOn)
@@ -195,7 +195,18 @@ async function main() {
       if (acquired > d) continue; // not yet owned on day d
       if (p.saleDate && p.saleDate <= d) continue; // already sold by day d
       if (!p.saleDate && p.status === "sold") continue; // sold (undated) — exclude
-      v += toEur(n(p.value), p.currency);
+      const native = propertyValueAt(
+        {
+          purchaseDate: p.purchaseDate,
+          purchasePrice: p.purchasePrice != null ? n(p.purchasePrice) : null,
+          value: n(p.value),
+          saleDate: p.saleDate,
+          salePrice: p.salePrice != null ? n(p.salePrice) : null,
+        },
+        d,
+        today,
+      );
+      v += toEur(native, p.currency);
     }
     return v;
   }

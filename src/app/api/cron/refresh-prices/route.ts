@@ -26,11 +26,10 @@ export const dynamic = "force-dynamic";
 function authorized(req: Request): boolean {
   const secret = env.CRON_SECRET;
   if (!secret) return false; // fail closed if unset
+  // Header-only: a ?key= fallback would land the secret in access logs and
+  // browser history. Manual trigger: curl -H "Authorization: Bearer $CRON_SECRET".
   const auth = req.headers.get("authorization");
-  if (auth === `Bearer ${secret}`) return true;
-  // Allow a manual trigger with ?key= for testing.
-  const key = new URL(req.url).searchParams.get("key");
-  return key === secret;
+  return auth === `Bearer ${secret}`;
 }
 
 export async function GET(req: Request) {

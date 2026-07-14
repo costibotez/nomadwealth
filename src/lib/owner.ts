@@ -13,7 +13,7 @@
 import "server-only";
 import { db } from "@/db";
 import { owner } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const ITERATIONS = 210_000;
 const enc = new TextEncoder();
@@ -106,4 +106,22 @@ export async function setOwnerPassword(
   }
   await db.insert(owner).values({ passwordHash, email: null });
   return { created: true };
+}
+
+/**
+ * Invalidate every outstanding session token (password change, 2FA change,
+ * "log out all devices") by bumping the owner's session generation. Returns
+ * the new version so the caller can re-issue a fresh cookie for the current
+ * device. No-ops (returns 0) when the install is still on the env-password
+ * fallback with no owner row.
+ */
+export async function bumpSessionVersion(): Promise<number> {
+  const existing = await getOwner();
+  if (!existing) return 0;
+  const [row] = await db
+    .update(owner)
+    .set({ sessionVersion: sql`${owner.sessionVersion} + 1` })
+    .where(eq(owner.id, existing.id))
+    .returning({ sessionVersion: owner.sessionVersion });
+  return row.sessionVersion;
 }
