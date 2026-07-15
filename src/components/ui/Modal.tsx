@@ -59,7 +59,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <label className="block min-w-0">
       <span className="stat-label mb-1 block">{label}</span>
       {children}
     </label>
@@ -67,4 +67,4 @@ export function Field({
 }
 
 export const inputClass =
-  "focusring w-full rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink placeholder:text-ink-faint";
+  "focusring w-full min-w-0 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink placeholder:text-ink-faint";
