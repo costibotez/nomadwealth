@@ -30,6 +30,29 @@ import {
   clients,
   clientServices,
 } from "@/db/schema";
+// Input schemas live in a plain module so they can be unit-tested — "use server"
+// files may only export async functions. See src/lib/action-schemas.ts.
+import {
+  txnSchema,
+  priceUpdateSchema,
+  loanSchema,
+  loanPaymentSchema,
+  dividendSchema,
+  receiptSchema,
+  accountSchema,
+  propertySchema,
+  rentSchema,
+  ledgerSchema,
+  weddingSchema,
+  giftSchema,
+  legendSchema,
+  watchlistSchema,
+  alertSchema,
+  businessSchema,
+  businessLedgerSchema,
+  clientSchema,
+  clientServiceSchema,
+} from "@/lib/action-schemas";
 
 const REVALIDATE = ["/dashboard", "/dashboard/holdings", "/dashboard/transactions", "/dashboard/performance", "/dashboard/loans", "/dashboard/real-estate", "/dashboard/dividends", "/dashboard/trash"];
 function revalidateAll() {
@@ -44,28 +67,6 @@ function fail(e: unknown): ActionResult {
 }
 
 // ---- Transactions --------------------------------------------------------
-const txnSchema = z.object({
-  tradeDate: z.string().min(1, "Date is required"),
-  direction: z.enum(["buy", "sell"]),
-  assetClass: z.enum(["ro_stock", "us_stock", "crypto", "reit", "mutual_fund", "gold", "other"]),
-  symbol: z.string().min(1, "Symbol is required").max(64),
-  quantity: z.coerce.number().finite(),
-  unitCost: z.coerce.number().min(0),
-  costCurrency: z.string().min(2).max(4).default("USD"),
-  currentPrice: z.coerce.number().min(0),
-  priceCurrency: z.string().min(2).max(4).default("USD"),
-  commission: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().min(0).nullable().default(null),
-  ),
-  saleTax: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().min(0).nullable().default(null),
-  ),
-  maturityDate: z.string().optional().nullable(),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function createTransaction(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -128,14 +129,7 @@ export async function updatePrices(
 ): Promise<ActionResult> {
   try {
     await requireSession();
-    const schema = z.array(
-      z.object({
-        symbol: z.string(),
-        assetClass: z.string(),
-        currentPrice: z.coerce.number().min(0),
-      }),
-    );
-    const list = schema.parse(updates);
+    const list = priceUpdateSchema.parse(updates);
     for (const u of list) {
       await db
         .update(transactions)
@@ -150,19 +144,6 @@ export async function updatePrices(
 }
 
 // ---- Loans ---------------------------------------------------------------
-const loanSchema = z.object({
-  borrower: z.string().min(1).max(120),
-  principal: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4).default("EUR"),
-  backed: z.enum(["property", "business", "personal", "none"]),
-  startDate: z.string().optional().nullable(),
-  interestRate: z.coerce.number().min(0).max(1000),
-  compounding: z.enum(["simple", "monthly", "annual"]),
-  termMonths: z.coerce.number().int().min(0).optional().nullable(),
-  status: z.enum(["active", "repaid", "defaulted"]),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function createLoan(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -232,13 +213,6 @@ export async function toggleLoanPayment(id: number, paid: boolean): Promise<Acti
 }
 
 // ---- Loan payments schedule (expected dues) ------------------------------
-const loanPaymentSchema = z.object({
-  loanId: z.coerce.number().int().positive(),
-  dueDate: z.string().min(1, "Due date is required"),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-});
-
 export async function addLoanPayment(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -269,19 +243,6 @@ export async function deleteLoanPayment(id: number): Promise<ActionResult> {
 }
 
 // ---- Dividends -----------------------------------------------------------
-const dividendSchema = z.object({
-  symbol: z.string().min(1, "Symbol is required").max(64),
-  assetClass: z.enum(["ro_stock", "us_stock", "crypto", "reit", "mutual_fund", "gold", "other"]),
-  exDate: z.string().optional().nullable(),
-  payDate: z.string().min(1, "Pay date is required"),
-  // Net (after-tax) cash actually received, in `currency`. This is the value the
-  // form now collects. amountPerShare stays optional for legacy/back-compat.
-  netAmount: z.coerce.number().min(0),
-  amountPerShare: z.coerce.number().min(0).optional().default(0),
-  currency: z.string().min(2).max(4),
-  note: z.string().max(300).optional().nullable(),
-});
-
 export async function addDividend(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -340,17 +301,6 @@ export async function deleteDividend(id: number): Promise<ActionResult> {
 }
 
 // ---- Loan receipts ledger ------------------------------------------------
-const receiptSchema = z.object({
-  loanId: z.coerce.number().int().positive(),
-  kind: z.enum(["principal", "interest"]),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-  receivedOn: z.string().min(1, "Date is required"),
-  method: z.enum(["cash", "bank_transfer"]),
-  bank: z.string().max(80).optional().nullable(),
-  notes: z.string().max(300).optional().nullable(),
-});
-
 export async function addLoanReceipt(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -384,15 +334,6 @@ export async function deleteLoanReceipt(id: number): Promise<ActionResult> {
 }
 
 // ---- Accounts ------------------------------------------------------------
-const accountSchema = z.object({
-  name: z.string().min(1).max(120),
-  type: z.enum(["crypto", "personal_cash", "company_cash", "savings", "brokerage"]),
-  balance: z.coerce.number(),
-  currency: z.string().min(2).max(4),
-  isCompany: z.coerce.boolean().default(false),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function upsertAccount(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -415,20 +356,6 @@ export async function upsertAccount(id: number | null, input: unknown): Promise<
 }
 
 // ---- Properties ----------------------------------------------------------
-const propertySchema = z.object({
-  name: z.string().min(1).max(120),
-  value: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-  monthlyRent: z.coerce.number().min(0),
-  isRented: z.coerce.boolean().default(false),
-  status: z.enum(["active", "sold"]).default("active"),
-  purchaseDate: z.string().optional().nullable(),
-  purchasePrice: z.coerce.number().min(0).optional().nullable(),
-  saleDate: z.string().optional().nullable(),
-  salePrice: z.coerce.number().min(0).optional().nullable(),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function upsertProperty(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -457,14 +384,6 @@ export async function upsertProperty(id: number | null, input: unknown): Promise
 }
 
 // ---- Property rent ledger ------------------------------------------------
-const rentSchema = z.object({
-  propertyId: z.coerce.number().int().positive(),
-  year: z.coerce.number().int().min(1990).max(2100),
-  month: z.coerce.number().int().min(1).max(12).optional().nullable(),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-});
-
 export async function addRent(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -496,15 +415,6 @@ export async function deleteRent(id: number): Promise<ActionResult> {
 }
 
 // ---- Property cost / sale ledger -----------------------------------------
-const ledgerSchema = z.object({
-  propertyId: z.coerce.number().int().positive(),
-  kind: z.enum(["acquisition", "sale"]),
-  label: z.string().min(1).max(120),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-  occurredOn: z.string().optional().nullable(),
-});
-
 export async function addPropertyLedger(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -537,13 +447,6 @@ export async function deletePropertyLedger(id: number): Promise<ActionResult> {
 }
 
 // ---- Wedding budget ------------------------------------------------------
-const weddingSchema = z.object({
-  label: z.string().min(1).max(120),
-  paid: z.coerce.number().min(0),
-  remaining: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4).default("RON"),
-});
-
 export async function upsertWeddingItem(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -574,13 +477,6 @@ export async function deleteWeddingItem(id: number): Promise<ActionResult> {
   }
 }
 
-const giftSchema = z.object({
-  name: z.string().min(1).max(120),
-  type: z.string().min(1).max(40),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4).default("RON"),
-});
-
 export async function upsertWeddingGift(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -607,12 +503,6 @@ export async function deleteWeddingGift(id: number): Promise<ActionResult> {
 }
 
 // ---- Income legend (tag a source -> category) ----------------------------
-const legendSchema = z.object({
-  label: z.string().min(1).max(160),
-  category: z.string().min(1).max(40),
-  customLabel: z.string().max(120).optional().nullable(),
-});
-
 export async function setIncomeLegend(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -643,14 +533,6 @@ export async function setIncomeLegend(input: unknown): Promise<ActionResult> {
 }
 
 // ---- Watchlist -----------------------------------------------------------
-const ASSET_CLASSES = ["ro_stock", "us_stock", "crypto", "reit", "mutual_fund", "gold", "other"] as const;
-
-const watchlistSchema = z.object({
-  symbol: z.string().min(1).max(64),
-  assetClass: z.enum(ASSET_CLASSES),
-  label: z.string().max(120).optional().nullable(),
-});
-
 export async function addWatchlistItem(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -679,15 +561,6 @@ export async function deleteWatchlistItem(id: number): Promise<ActionResult> {
 }
 
 // ---- Price alerts --------------------------------------------------------
-const alertSchema = z.object({
-  symbol: z.string().min(1).max(64),
-  assetClass: z.enum(ASSET_CLASSES),
-  targetPrice: z.coerce.number().positive(),
-  currency: z.string().min(2).max(4).default("USD"),
-  direction: z.enum(["above", "below"]),
-  note: z.string().max(200).optional().nullable(),
-});
-
 export async function addPriceAlert(input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -785,18 +658,6 @@ export async function checkAlerts(
 }
 
 // ---- Businesses ----------------------------------------------------------
-const businessSchema = z.object({
-  name: z.string().min(1).max(120),
-  currency: z.string().min(2).max(4).default("EUR"),
-  status: z.enum(["active", "sold", "closed"]).default("active"),
-  valuation: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().min(0).nullable().default(null),
-  ),
-  startedOn: z.string().optional().nullable(),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function upsertBusiness(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -830,19 +691,6 @@ export async function deleteBusiness(id: number): Promise<ActionResult> {
     return fail(e);
   }
 }
-
-const businessLedgerSchema = z.object({
-  businessId: z.coerce.number().int().positive(),
-  year: z.coerce.number().int().min(1990).max(2100),
-  month: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().int().min(1).max(12).nullable().default(null),
-  ),
-  kind: z.enum(["revenue", "cogs", "ad_spend", "expense"]),
-  amount: z.coerce.number().min(0),
-  currency: z.string().min(2).max(4),
-  label: z.string().max(120).optional().nullable(),
-});
 
 export async function addBusinessLedger(input: unknown): Promise<ActionResult> {
   try {
@@ -878,13 +726,6 @@ export async function deleteBusinessLedger(id: number): Promise<ActionResult> {
 }
 
 // ---- Clients -------------------------------------------------------------
-const clientSchema = z.object({
-  name: z.string().min(1).max(120),
-  status: z.enum(["active", "paused", "churned"]).default("active"),
-  currency: z.string().min(2).max(4).default("EUR"),
-  notes: z.string().max(500).optional().nullable(),
-});
-
 export async function upsertClient(id: number | null, input: unknown): Promise<ActionResult> {
   try {
     await requireSession();
@@ -909,30 +750,6 @@ export async function deleteClient(id: number): Promise<ActionResult> {
     return fail(e);
   }
 }
-
-const clientServiceSchema = z.object({
-  clientId: z.coerce.number().int().positive(),
-  type: z.enum(["monthly_retainer", "one_off", "annual_hosting", "marketing", "reporting", "hourly", "other"]),
-  label: z.string().max(160).optional().nullable(),
-  amount: z.coerce.number().min(0).default(0),
-  currency: z.string().min(2).max(4),
-  cadence: z.enum(["weekly", "monthly", "quarterly", "four_monthly", "annual", "one_off", "times_per_year"]),
-  timesPerYear: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().int().min(1).max(366).nullable().default(null),
-  ),
-  hours: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().min(0).nullable().default(null),
-  ),
-  rate: z.preprocess(
-    (v) => (v === "" || v == null ? null : v),
-    z.coerce.number().min(0).nullable().default(null),
-  ),
-  startDate: z.string().optional().nullable(),
-  renewalDate: z.string().optional().nullable(),
-  active: z.coerce.boolean().default(true),
-});
 
 export async function upsertClientService(id: number | null, input: unknown): Promise<ActionResult> {
   try {

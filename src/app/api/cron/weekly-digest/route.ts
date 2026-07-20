@@ -5,20 +5,14 @@
  */
 import { NextResponse } from "next/server";
 import { sendWeeklyDigest } from "@/lib/notifications/digest";
-import { env } from "@/lib/env";
+import { cronAuthorized } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function authorized(req: Request): boolean {
-  const secret = env.CRON_SECRET;
-  if (!secret) return false; // fail closed if unset
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function GET(req: Request) {
-  if (!authorized(req)) {
+  if (!cronAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {

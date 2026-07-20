@@ -16,6 +16,7 @@ import {
 } from "@/db/queries";
 import { getFxRates, toEur } from "@/lib/fx-server";
 import { loanState, interestToDate, type Compounding } from "@/lib/finance";
+import { movingAverageBasis } from "@/lib/cost-basis";
 
 export const ASSET_CLASS_LABELS: Record<string, string> = {
   ro_stock: "RO Stocks",
@@ -92,58 +93,39 @@ export async function getHoldingsModel() {
 
   for (const [key, allLots] of bySymbol) {
     const [assetClass, symbol] = key.split("::");
-    const buys = allLots.filter((l) => l.direction === "buy");
-    const sells = allLots.filter((l) => l.direction === "sell");
 
-    // Average-cost basis from buys (in native + EUR).
-    let buyQty = 0,
-      investedNativeBuys = 0,
-      investedEurBuys = 0,
-      daysSum = 0,
+    // Moving-average cost basis: processes buys/sells chronologically, converts
+    // each lot to EUR, and resets when a position is fully closed (so a re-buy
+    // does not inherit a sold-out lot's cost). See src/lib/cost-basis.ts.
+    const basis = movingAverageBasis(allLots, (amount, currency) =>
+      toEur(amount, currency, fx.rates),
+    );
+    for (const r of basis.realized) {
+      realizedFromTxns.push({ symbol, assetClass, ...r });
+    }
+
+    const remainingQty = basis.remainingQty;
+    // Fully-closed positions drop out of the holdings table (realized P/L kept).
+    if (remainingQty <= 1e-9) continue;
+
+    // Display extras derived from the buy lots (current price is the same for
+    // every lot of a symbol; last one iterated wins).
+    let daysSum = 0,
       daysN = 0;
     let maturityDate: string | null = null;
     let priceEurPerShare = 0;
     let priceCurrency = "EUR";
-    for (const l of buys) {
-      buyQty += l.quantity;
-      // Commission on a buy is part of what you paid → add to cost basis.
-      const grossNative = l.quantity * l.unitCost + (l.commission ?? 0);
-      investedNativeBuys += grossNative;
-      investedEurBuys += toEur(grossNative, l.costCurrency, fx.rates);
+    for (const l of allLots) {
+      if (l.direction !== "buy") continue;
       daysSum += daysBetween(l.tradeDate);
       daysN++;
       if (l.maturityDate) maturityDate = l.maturityDate;
-      // Representative current price + its currency (same symbol → same); last wins.
       priceEurPerShare = toEur(l.currentPrice, l.priceCurrency, fx.rates);
       priceCurrency = l.priceCurrency;
     }
-    const avgCostNative = buyQty > 0 ? investedNativeBuys / buyQty : 0;
-    const avgCostEur = buyQty > 0 ? investedEurBuys / buyQty : 0;
 
-    // Realized P/L per sell (proceeds − average cost basis of the sold shares).
-    let sellQty = 0;
-    for (const s of sells.sort((a, b) => (a.tradeDate < b.tradeDate ? -1 : 1))) {
-      sellQty += s.quantity;
-      // Net proceeds = gross − sell commission − sale tax.
-      const netNative = s.quantity * s.unitCost - (s.commission ?? 0) - (s.saleTax ?? 0);
-      const proceedsEur = toEur(netNative, s.costCurrency, fx.rates);
-      const costEur = avgCostEur * s.quantity;
-      realizedFromTxns.push({
-        symbol,
-        assetClass,
-        closeDate: s.tradeDate,
-        quantity: s.quantity,
-        costEur,
-        proceedsEur,
-        plEur: proceedsEur - costEur,
-      });
-    }
-
-    const remainingQty = buyQty - sellQty;
-    // Fully-closed positions drop out of the holdings table (realized P/L kept).
-    if (remainingQty <= 1e-9) continue;
-
-    const investedEur = avgCostEur * remainingQty;
+    const avgCostNative = basis.avgCostNative;
+    const investedEur = basis.investedEur;
     const currentValueEur = priceEurPerShare * remainingQty;
     const unrealizedPlEur = currentValueEur - investedEur;
     symbols.push({

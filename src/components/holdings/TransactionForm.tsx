@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Modal, Field, inputClass } from "@/components/ui/Modal";
+import { Modal, Field, inputClass, dateInputClass } from "@/components/ui/Modal";
 import { createTransaction, updateTransaction } from "@/app/actions";
 import type { TransactionRow } from "@/db/queries";
 
@@ -49,9 +49,9 @@ export function TransactionForm({
   return (
     <Modal open={open} onClose={onClose} title={initial ? "Edit transaction" : "Add transaction"}>
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Trade date">
-            <input type="date" name="tradeDate" required defaultValue={initial?.tradeDate ?? ""} className={inputClass} />
+            <input type="date" name="tradeDate" required defaultValue={initial?.tradeDate ?? ""} className={dateInputClass} />
           </Field>
           <Field label="Direction">
             <select name="direction" value={direction} onChange={(e) => setDirection(e.target.value)} className={inputClass}>
@@ -60,7 +60,7 @@ export function TransactionForm({
             </select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Asset class">
             <select name="assetClass" defaultValue={initial?.assetClass ?? defaultAssetClass ?? "ro_stock"} className={inputClass}>
               {ASSET_CLASSES.map(([v, l]) => (
@@ -75,7 +75,7 @@ export function TransactionForm({
         <Field label="Quantity">
           <input name="quantity" type="number" step="any" required defaultValue={initial?.quantity ?? ""} className={inputClass} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Unit cost">
             <input name="unitCost" type="number" step="any" required defaultValue={initial?.unitCost ?? ""} className={inputClass} />
           </Field>
@@ -85,7 +85,7 @@ export function TransactionForm({
             </select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Current price">
             <input name="currentPrice" type="number" step="any" required defaultValue={initial?.currentPrice ?? ""} className={inputClass} />
           </Field>
@@ -95,7 +95,7 @@ export function TransactionForm({
             </select>
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Commission (optional)">
             <input name="commission" type="number" step="any" min="0" defaultValue={initial?.commission ?? ""} placeholder="0" className={inputClass} />
           </Field>
@@ -106,7 +106,7 @@ export function TransactionForm({
           )}
         </div>
         <Field label="Maturity date (REITs, optional)">
-          <input name="maturityDate" type="date" defaultValue={initial?.maturityDate ?? ""} className={inputClass} />
+          <input name="maturityDate" type="date" defaultValue={initial?.maturityDate ?? ""} className={dateInputClass} />
         </Field>
         <Field label="Notes (optional)">
           <input name="notes" defaultValue={initial?.notes ?? ""} className={inputClass} />

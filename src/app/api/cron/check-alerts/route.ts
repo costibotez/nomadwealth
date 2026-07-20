@@ -15,23 +15,14 @@ import { priceAlerts } from "@/db/schema";
 import { fetchLivePrices } from "@/lib/prices";
 import { evaluateAndNotify } from "@/lib/notifications/evaluate";
 import { checkMilestones } from "@/lib/notifications/milestones";
-import { env } from "@/lib/env";
+import { cronAuthorized } from "@/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function authorized(req: Request): boolean {
-  const secret = env.CRON_SECRET;
-  if (!secret) return false; // fail closed if unset
-  // Header-only: a ?key= fallback would land the secret in access logs and
-  // browser history. Manual trigger: curl -H "Authorization: Bearer $CRON_SECRET".
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
-}
-
 export async function GET(req: Request) {
-  if (!authorized(req)) {
+  if (!cronAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

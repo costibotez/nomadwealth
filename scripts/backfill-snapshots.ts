@@ -36,31 +36,19 @@ config({ path: ".env.local" });
 config();
 
 import { db, schema } from "./db";
-import { loanState, interestToDate, type Compounding } from "../src/lib/finance";
-import { propertyValueAt } from "../src/lib/property-history";
+import {
+  num as n,
+  addDays,
+  makeToEur,
+  investmentsCostEur,
+  investmentsMarketEur,
+  loansOutstandingEur,
+  propertiesValueEur,
+} from "../src/lib/backfill-valuation";
 import { FALLBACK_RATES, CURRENCIES, type Currency } from "../src/config/fx";
 
 const DRY = process.argv.includes("--dry");
-const DAY = 86_400_000;
 const today = new Date().toISOString().slice(0, 10);
-
-const n = (v: unknown): number => {
-  const x = typeof v === "string" ? parseFloat(v) : Number(v);
-  return Number.isFinite(x) ? x : 0;
-};
-const iso = (d: Date) => d.toISOString().slice(0, 10);
-const addDays = (isoDate: string, days: number) =>
-  iso(new Date(Date.parse(isoDate) + days * DAY));
-
-/** EUR-conversion using a single rate table (EUR -> X). */
-function makeToEur(rates: Record<Currency, number>) {
-  return (amount: number, currency: string) => {
-    const c = (currency || "EUR").toUpperCase() as Currency;
-    const rate = rates[c];
-    if (!rate || rate === 0) return amount; // unknown currency: assume EUR
-    return amount / rate;
-  };
-}
 
 /** Live EUR rates from Frankfurter, falling back to the static table. */
 async function getRates(): Promise<Record<Currency, number>> {
@@ -119,105 +107,18 @@ async function main() {
     .filter((a) => a.isCompany)
     .reduce((s, a) => s + toEur(n(a.balance), a.currency), 0);
 
-  // ---- per-day component functions --------------------------------------
-  function investmentsCostEur(d: string): number {
-    let v = 0;
-    for (const t of open) {
-      if (!t.tradeDate || t.tradeDate > d) continue;
-      const cost = toEur(n(t.quantity) * n(t.unitCost), t.costCurrency);
-      v += t.direction === "sell" ? -cost : cost;
-    }
-    // Positions later closed were still held (at cost) on dates before they closed.
-    for (const r of realized) {
-      if (!r.openDate || r.openDate > d) continue;
-      if (r.closeDate && r.closeDate <= d) continue;
-      v += toEur(n(r.cost), r.currency);
-    }
-    return v;
-  }
-
-  function investmentsMarketEur(): number {
-    let v = 0;
-    for (const t of open) {
-      const mv = toEur(n(t.quantity) * n(t.currentPrice), t.priceCurrency);
-      v += t.direction === "sell" ? -mv : mv;
-    }
-    return v;
-  }
-
-  function loansEur(d: string): number {
-    let v = 0;
-    for (const l of loans) {
-      if (!l.startDate || l.startDate > d) continue;
-      const start = new Date(l.startDate);
-      const asOf = new Date(d);
-      const rcpts = receipts
-        .filter((r) => r.loanId === l.id && r.receivedOn <= d)
-        .map((r) => ({
-          date: new Date(r.receivedOn),
-          amount: n(r.amount),
-          kind: r.kind as "principal" | "interest",
-        }));
-      const state = loanState(n(l.principal), start, [], rcpts);
-      const interest = interestToDate(
-        n(l.principal),
-        n(l.interestRate),
-        start,
-        asOf,
-        l.termMonths ?? null,
-        l.compounding as Compounding,
-      );
-      const outstanding =
-        state.principalRemaining + Math.max(0, interest - state.interestReceived);
-      v += toEur(outstanding, l.currency);
-    }
-    return v;
-  }
-
-  // Each property's value is interpolated linearly from purchasePrice@purchaseDate
-  // up to its current `value` today (see lib/property-history) — so the curve
-  // shows appreciation accruing over time instead of a flat step, while still
-  // landing exactly on `value` today to match the live net-worth model. Falls
-  // back to flat `value` when there's no purchase basis. The acquisition date
-  // (for the "not yet owned" filter) is the earliest known of: purchaseDate, the
-  // property's first dated ledger entry, else the series start.
-  const firstLedgerDate = (propertyId: number): string | null => {
-    const dates = propLedger
-      .filter((e) => e.propertyId === propertyId && e.occurredOn)
-      .map((e) => e.occurredOn as string)
-      .sort();
-    return dates[0] ?? null;
-  };
-  function propertiesEur(d: string): number {
-    let v = 0;
-    for (const p of properties) {
-      const acquired = p.purchaseDate ?? firstLedgerDate(p.id) ?? start;
-      if (acquired > d) continue; // not yet owned on day d
-      if (p.saleDate && p.saleDate <= d) continue; // already sold by day d
-      if (!p.saleDate && p.status === "sold") continue; // sold (undated) — exclude
-      const native = propertyValueAt(
-        {
-          purchaseDate: p.purchaseDate,
-          purchasePrice: p.purchasePrice != null ? n(p.purchasePrice) : null,
-          value: n(p.value),
-          saleDate: p.saleDate,
-          salePrice: p.salePrice != null ? n(p.salePrice) : null,
-        },
-        d,
-        today,
-      );
-      v += toEur(native, p.currency);
-    }
-    return v;
-  }
-
   // ---- build the daily series -------------------------------------------
+  // Per-day component valuations live in src/lib/backfill-valuation.ts (unit
+  // tested there); the property curve interpolates purchase basis → today's
+  // value via lib/property-history.
   const rows: (typeof schema.netWorthSnapshots.$inferInsert)[] = [];
   for (let d = start; d <= today; d = addDays(d, 1)) {
     const isToday = d === today;
-    const investmentsEur = isToday ? investmentsMarketEur() : investmentsCostEur(d);
-    const loanEur = loansEur(d);
-    const propEur = propertiesEur(d);
+    const investmentsEur = isToday
+      ? investmentsMarketEur(open, toEur)
+      : investmentsCostEur(d, open, realized, toEur);
+    const loanEur = loansOutstandingEur(d, loans, receipts, toEur);
+    const propEur = propertiesValueEur(d, today, properties, propLedger, start, toEur);
     const totalEur = investmentsEur + accountsEur + loanEur + propEur;
     const personalEur = totalEur - companyCashEur;
     rows.push({

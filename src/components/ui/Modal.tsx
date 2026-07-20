@@ -59,8 +59,8 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block min-w-0">
-      <span className="stat-label mb-1 block">{label}</span>
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-ink-muted">{label}</span>
       {children}
     </label>
   );
@@ -68,3 +68,7 @@ export function Field({
 
 export const inputClass =
   "focusring w-full min-w-0 rounded-lg border border-border bg-panel px-3 py-2 text-sm text-ink placeholder:text-ink-faint";
+
+// Native date inputs render taller than text inputs on iOS/Safari; appearance-none
+// normalizes their height so they line up with the rest of the form.
+export const dateInputClass = `${inputClass} appearance-none`;
